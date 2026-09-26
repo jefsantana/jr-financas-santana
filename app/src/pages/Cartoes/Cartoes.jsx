@@ -19,7 +19,7 @@ export default function Cartoes() {
     colunas: [
       { chave: 'nome', rotulo: 'Nome' },
       { chave: 'limite', rotulo: 'Limite', numerica: true, render: (r) => formatarMoeda(r.limite) },
-      { chave: 'diaFechamento', rotulo: 'Fechamento', render: (r) => `Dia ${r.diaFechamento}` },
+      { chave: 'diaFechamento', rotulo: 'Fechamento', render: (r) => (r.diaFechamento ? `Dia ${r.diaFechamento}` : '-') },
       { chave: 'diaVencimento', rotulo: 'Vencimento', render: (r) => (r.diaVencimento ? `Dia ${r.diaVencimento}` : '-') },
     ],
   };
