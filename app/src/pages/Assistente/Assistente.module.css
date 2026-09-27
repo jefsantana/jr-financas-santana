@@ -1,0 +1,152 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+  height: calc(100dvh - 180px);
+  min-height: 420px;
+}
+
+.seletorPessoa {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  flex-wrap: wrap;
+}
+
+.seletorRotulo {
+  font-size: 0.85rem;
+  color: var(--cor-texto-secundario);
+}
+
+.opcaoPessoa {
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.opcaoPessoa:hover {
+  border-color: var(--cor-primaria);
+}
+
+.opcaoPessoaAtiva {
+  background: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: #fff;
+}
+
+.chatCard {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.listaMensagens {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--espaco-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.linha {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--espaco-sm);
+  max-width: 85%;
+}
+
+.linhaUsuario {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.avatarBolha {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cor-fundo);
+  color: var(--cor-texto-secundario);
+}
+
+.bolha {
+  padding: 10px 14px;
+  border-radius: var(--raio-md, 12px);
+  white-space: pre-wrap;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.bolhaBot {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  border-bottom-left-radius: 4px;
+}
+
+.bolhaUsuario {
+  background: var(--cor-primaria);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.digitando {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.digitando span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  animation: piscar 1.2s infinite ease-in-out;
+}
+
+.digitando span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.digitando span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes piscar {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 0.9; }
+}
+
+.formulario {
+  display: flex;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-md);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.campoTexto {
+  flex: 1;
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 0.92rem;
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.campoTexto:focus {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 1px;
+}

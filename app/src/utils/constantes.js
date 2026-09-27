@@ -1,5 +1,6 @@
 export const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard', grupo: 'Principal' },
+  { path: '/assistente', label: 'Assistente', icon: 'MessageCircle', grupo: 'Principal' },
   { path: '/entradas', label: 'Entradas', icon: 'TrendingUp', grupo: 'Movimentações' },
   { path: '/gastos', label: 'Gastos', icon: 'TrendingDown', grupo: 'Movimentações' },
   { path: '/categorias', label: 'Categorias', icon: 'Tag', grupo: 'Movimentações' },

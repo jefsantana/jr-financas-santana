@@ -8,6 +8,7 @@ import { AppLayout } from './layouts/AppLayout/AppLayout.jsx';
 import Login from './pages/Login/Login.jsx';
 import RedefinirSenha from './pages/RedefinirSenha/RedefinirSenha.jsx';
 import Dashboard from './pages/Dashboard/Dashboard.jsx';
+import Assistente from './pages/Assistente/Assistente.jsx';
 import Entradas from './pages/Entradas/Entradas.jsx';
 import Gastos from './pages/Gastos/Gastos.jsx';
 import Categorias from './pages/Categorias/Categorias.jsx';
@@ -39,6 +40,7 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/assistente" element={<Assistente />} />
                   <Route path="/entradas" element={<Entradas />} />
                   <Route path="/gastos" element={<Gastos />} />
                   <Route path="/categorias" element={<Categorias />} />

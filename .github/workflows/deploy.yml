@@ -39,6 +39,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_BOT_API_URL: ${{ secrets.VITE_BOT_API_URL }}
 
       - name: Fallback de SPA (404.html)
         run: cp app/dist/index.html app/dist/404.html

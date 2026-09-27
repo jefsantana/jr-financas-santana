@@ -82,12 +82,16 @@ function jaProcessada(id) {
 // "pendência" que ela era forçada a tentar completar). Isso fazia o bot "se
 // perder" quando a pessoa mudava de assunto no meio de uma pergunta, ou mandava
 // uma resposta curta (tipo "sim") que só faz sentido lendo a mensagem anterior.
-// Aqui guardamos, por pessoa (chaveRemetente), as últimas mensagens trocadas —
-// só em memória (não sobrevive a um restart do bot, mas contexto de conversa é
-// coisa efêmera mesmo; o que precisa sobreviver a restart, como um lançamento
-// pela metade, continua na tabela bot_pendencias). Isso é passado pra IA em toda
-// chamada, pra ela raciocinar com o histórico de verdade em vez do código tentar
-// adivinhar regra por regra o que é continuação e o que é assunto novo.
+// Aqui guardamos, por pessoa (chaveRemetente), as últimas mensagens trocadas.
+// Um Map em memória serve de cache rápido (evita ida ao banco a cada mensagem
+// da mesma conversa), mas cada mensagem também é persistida no Supabase
+// (tabela bot_historico_conversa) — assim, quando o bot reinicia ou reconecta
+// (o que acontece com frequência, por causa do modelo de polling), a memória
+// em RAM some mas a conversa não: a próxima mensagem dessa pessoa recarrega o
+// histórico recente do banco em vez do bot "esquecer" tudo. Isso é passado pra
+// IA em toda chamada, pra ela raciocinar com o histórico de verdade em vez do
+// código tentar adivinhar regra por regra o que é continuação e o que é
+// assunto novo.
 const HISTORICO_POR_REMETENTE = new Map(); // jid -> [{ papel: 'usuario'|'bot', texto, quando }]
 const HISTORICO_MAX_ENTRADAS = 8; // ~4 idas e voltas
 const HISTORICO_VALIDADE_MS = 30 * 60 * 1000; // 30min sem mensagens = contexto "esfria"
@@ -98,12 +102,50 @@ function registrarHistorico(jid, papel, texto) {
   lista.push({ papel, texto, quando: Date.now() });
   while (lista.length > HISTORICO_MAX_ENTRADAS) lista.shift();
   HISTORICO_POR_REMETENTE.set(jid, lista);
+
+  // Persiste no Supabase sem bloquear o fluxo (fire-and-forget) — se falhar,
+  // a conversa continua funcionando pelo cache em memória, só perde a
+  // sobrevivência a um restart bem nessa hora.
+  supabase
+    .from('bot_historico_conversa')
+    .insert({ familia_id: FAMILIA_ID, jid, papel, texto })
+    .then(({ error }) => {
+      if (error) console.warn('Não foi possível persistir histórico de conversa:', error.message);
+    });
+}
+
+// Busca no Supabase as mensagens recentes (dentro da janela de validade) de
+// uma pessoa — usado só quando o cache em memória está vazio pra essa pessoa
+// (bot acabou de (re)iniciar e ainda não viu nenhuma mensagem dela).
+async function carregarHistoricoRecente(jid) {
+  const desde = new Date(Date.now() - HISTORICO_VALIDADE_MS).toISOString();
+  const { data, error } = await supabase
+    .from('bot_historico_conversa')
+    .select('papel, texto, criado_em')
+    .eq('familia_id', FAMILIA_ID)
+    .eq('jid', jid)
+    .gte('criado_em', desde)
+    .order('criado_em', { ascending: true })
+    .limit(HISTORICO_MAX_ENTRADAS);
+  if (error) {
+    console.warn('Não foi possível carregar histórico de conversa do Supabase:', error.message);
+    return [];
+  }
+  return (data || []).map((row) => ({
+    papel: row.papel,
+    texto: row.texto,
+    quando: new Date(row.criado_em).getTime(),
+  }));
 }
 
 // Retorna o histórico recente já formatado como texto pra IA, ou null se não
 // houver nada relevante (evita gastar tokens à toa numa conversa nova).
-function formatarHistorico(jid) {
-  const lista = HISTORICO_POR_REMETENTE.get(jid);
+async function formatarHistorico(jid) {
+  let lista = HISTORICO_POR_REMETENTE.get(jid);
+  if (!lista || lista.length === 0) {
+    lista = await carregarHistoricoRecente(jid);
+    if (lista.length > 0) HISTORICO_POR_REMETENTE.set(jid, lista);
+  }
   if (!lista || lista.length === 0) return null;
   const agora = Date.now();
   const recentes = lista.filter((m) => agora - m.quando <= HISTORICO_VALIDADE_MS);
@@ -604,7 +646,7 @@ async function interpretarMensagem(texto, remetente, contextoExtra = null, chave
     { type: 'text', text: contextoContasFixas(contasFixas) },
   ];
   if (contextoExtra) blocos.push({ type: 'text', text: contextoExtra });
-  const historico = chaveRemetente ? formatarHistorico(chaveRemetente) : null;
+  const historico = chaveRemetente ? await formatarHistorico(chaveRemetente) : null;
   if (historico) blocos.push({ type: 'text', text: historico });
   blocos.push({ type: 'text', text: `Mensagem de texto do WhatsApp (remetente: ${remetente}):\n"${texto}"` });
   return chamarIA(blocos);
@@ -653,7 +695,7 @@ async function continuarComResposta(dadosParciais, resposta, remetente, chaveRem
     `PRIMEIRO decida: essa resposta realmente responde à pergunta acima (mesmo que de forma indireta), ou é um assunto novo, sem relação com o que foi perguntado (ex: perguntou o valor de uma conta e a pessoa mandou algo tipo "contas fixas", "me envia X", ou começou a falar de outro lançamento)?\n` +
     `- Se FOR uma resposta válida à pergunta: atualize o JSON combinando o que já tinha com essa resposta nova. Se ainda faltar algo, pergunte de novo (preencha 'faltando' e 'pergunta'). Se já estiver tudo completo, deixe 'faltando' como array vazio, 'pergunta' como null, e preencha o 'comentario'.\n` +
     `- Se NÃO FOR relacionada (mudou de assunto): IGNORE completamente o estado anterior e classifique "${resposta}" como se fosse uma mensagem nova, começando do zero, normalmente (pode virar qualquer um dos tipos, inclusive consulta ou conversa casual). Não tente encaixar à força no lançamento antigo.`;
-  const historico = chaveRemetente ? formatarHistorico(chaveRemetente) : null;
+  const historico = chaveRemetente ? await formatarHistorico(chaveRemetente) : null;
   const blocos = [
     { type: 'text', text: contextoCartoes(cartoes, cartoesAlimentacao) },
     { type: 'text', text: contextoContasFixas(contasFixas) },
@@ -1086,7 +1128,16 @@ const PERGUNTAS_POR_CAMPO = {
   numero_parcelas: 'Em quantas parcelas, por favor?',
   valor_alvo: 'Qual é o valor da meta, por favor?',
   limite_mensal: 'Qual é o limite mensal, por favor?',
+  pessoa: 'Foi você (Jeferson) ou a Raquel, por favor?',
 };
+
+// As duas únicas pessoas reais do sistema — qualquer outro valor em "pessoa"
+// (ex: a IA copiando o nome de exibição do WhatsApp de quem mandou a
+// mensagem, tipo "Jef Santana" em vez de "Jeferson") é sinal de erro, nunca
+// um valor válido. Sem essa trava, um lançamento já entrava com esse nome
+// errado no banco, e passava a aparecer como uma "3ª pessoa" fantasma nos
+// gráficos do site (foi o que causou o bug visto no painel de gastos).
+const PESSOAS_VALIDAS = ['Jeferson', 'Raquel'];
 
 // Segunda camada de validação específica pra gasto_alimentacao/recarga_alimentacao:
 // buscarOuCriarCartaoAlimentacao() CRIA um cartão novo (saldo 0) se o nome não
@@ -1120,6 +1171,21 @@ function validarDados(dados) {
     if (campo === 'dia_vencimento') return !(Number.isInteger(Number(valor)) && Number(valor) >= 1 && Number(valor) <= 31);
     return false;
   });
+  // "pessoa" não é obrigatório (por isso não está em
+  // CAMPOS_OBRIGATORIOS_POR_TIPO), mas nos tipos que realmente guardam esse
+  // campo no banco, quando vem preenchido só pode ser um dos dois nomes
+  // reais. Restrito a esses tipos pra não travar lançamentos (ex: meta,
+  // conta_fixa) onde a tabela nem tem coluna "pessoa" e o valor, mesmo
+  // errado, seria descartado de qualquer forma.
+  const TIPOS_COM_PESSOA = ['gasto', 'entrada', 'compra_cartao', 'gasto_alimentacao', 'recarga_alimentacao'];
+  if (
+    TIPOS_COM_PESSOA.includes(dados.tipo) &&
+    dados.pessoa &&
+    !PESSOAS_VALIDAS.includes(dados.pessoa) &&
+    !invalidos.includes('pessoa')
+  ) {
+    invalidos.push('pessoa');
+  }
   return { valido: invalidos.length === 0, invalidos };
 }
 
@@ -2130,6 +2196,29 @@ cron.schedule(
   { timezone: FUSO_HORARIO }
 );
 
+// Todo dia às 3h: apaga histórico de conversa com mais de 2 dias (só serve
+// pra IA entender contexto de curto prazo — HISTORICO_VALIDADE_MS já expira
+// em 30min — guardar mais que isso no banco não tem utilidade, só ocuparia
+// espaço à toa pra sempre).
+cron.schedule(
+  '0 3 * * *',
+  async () => {
+    try {
+      const limite = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from('bot_historico_conversa')
+        .delete()
+        .eq('familia_id', FAMILIA_ID)
+        .lt('criado_em', limite);
+      if (error) throw new Error(error.message);
+      console.log('🧹 Histórico de conversa antigo limpo.');
+    } catch (err) {
+      console.error('Erro ao limpar histórico de conversa antigo:', err.message);
+    }
+  },
+  { timezone: FUSO_HORARIO }
+);
+
 // ===================== Baileys: conexão com o WhatsApp =====================
 async function iniciar() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -2319,254 +2408,280 @@ async function iniciar() {
       return;
     }
 
-    if (!dados.ehTransacao) {
-      console.log('ℹ️  Mensagem não é uma transação financeira, respondendo de forma casual.');
-      await responder(chaveRemetente, dados.respostaCasual || 'Oi! 😊');
-      return;
-    }
+    await finalizarLancamento(dados, {
+      chaveRemetente,
+      nomeRemetente,
+      alvoCorrecao,
+      enviarResposta: (texto) => responder(chaveRemetente, texto),
+    });
+  }
+}
 
-    // "Pergunta" sobre saldo/resumo: responde na hora, sem gravar nada no banco.
-    if (dados.tipo === 'consulta_saldo') {
-      try {
-        const texto =
-          dados.escopo === 'alimentacao'
-            ? await gerarResumoCartaoAlimentacao()
-            : await gerarResumoGeral(dados.periodo === 'anterior' ? 'anterior' : 'atual');
-        await responder(chaveRemetente, texto);
-        console.log('📊 Resumo enviado sob demanda.');
-      } catch (err) {
-        console.error('Erro ao gerar resumo sob demanda:', err.message);
-      }
-      return;
-    }
+// ===================== Núcleo comum: transforma "dados" (já interpretados
+// pela IA) em resposta + gravação no banco =====================
+// Extraído de processarMensagem() pra ser reaproveitado tanto pelo WhatsApp
+// quanto pelo chat do site (endpoint /chat) — as duas pontas de entrada só
+// diferem em COMO a mensagem chega e ONDE a resposta é entregue; a partir
+// daqui (interpretar o que fazer com "dados" e gravar no Supabase) a lógica
+// é idêntica pras duas, e precisa continuar assim (duplicar essas regras de
+// negócio entre WhatsApp e site seria um convite a elas divergirem com o
+// tempo). "enviarResposta" abstrai o canal: no WhatsApp manda pro grupo, no
+// site só acumula o texto pra devolver na resposta HTTP.
+async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoCorrecao, enviarResposta }) {
+  if (!dados.ehTransacao) {
+    console.log('ℹ️  Mensagem não é uma transação financeira, respondendo de forma casual.');
+    await enviarResposta(dados.respostaCasual || 'Oi! 😊');
+    return;
+  }
 
-    // "Pergunta" sobre o consumo de IA do próprio bot (não é sobre dinheiro).
-    if (dados.tipo === 'consulta_uso_ia') {
-      try {
-        await responder(chaveRemetente, await gerarResumoUsoIA());
-        console.log('📊 Resumo de uso de IA enviado sob demanda.');
-      } catch (err) {
-        console.error('Erro ao gerar resumo de uso de IA:', err.message);
-      }
-      return;
-    }
-
-    // "Pergunta" sobre o limite diário gratuito dos provedores (cota da API, não custo).
-    if (dados.tipo === 'consulta_limite_provedores') {
-      try {
-        await responder(chaveRemetente, await gerarResumoLimitesGratuitos());
-        console.log('📊 Resumo de limite dos provedores enviado sob demanda.');
-      } catch (err) {
-        console.error('Erro ao gerar resumo de limite dos provedores:', err.message);
-      }
-      return;
-    }
-
-    // "Pergunta" sobre a lista de contas fixas cadastradas e seus vencimentos.
-    if (dados.tipo === 'consulta_contas_fixas') {
-      try {
-        await responder(chaveRemetente, await gerarResumoContasFixas());
-        console.log('📋 Resumo de contas fixas enviado sob demanda.');
-      } catch (err) {
-        console.error('Erro ao gerar resumo de contas fixas:', err.message);
-      }
-      return;
-    }
-
-    // Confirmação de pagamento de uma conta fixa já cadastrada (marca o ciclo
-    // atual como pago — não cria gasto novo nem conta nova).
-    if (dados.tipo === 'pagamento_conta_fixa') {
-      try {
-        const resultado = await salvarPagamentoContaFixa(dados);
-        if (resultado.jaEstavaPago) {
-          await responder(chaveRemetente, `✅ *${resultado.conta.descricao}* já estava marcada como paga esse mês.`);
-        } else {
-          await responder(
-            chaveRemetente,
-            `✅ *${resultado.conta.descricao}* marcada como paga!\n📅 Referente ao vencimento de ${resultado.vencimento.toFormat('dd/MM')}.`
-          );
-        }
-        console.log(`💰 Pagamento de conta fixa registrado: ${resultado.conta.descricao}`);
-      } catch (err) {
-        console.error('Erro ao registrar pagamento de conta fixa:', err.message);
-        await responder(
-          chaveRemetente,
-          `🤔 Não encontrei "${dados.descricao}" entre as contas fixas cadastradas. Você poderia confirmar o nome certo, por favor?`
-        );
-      }
-      return;
-    }
-
-    // Correção de um lançamento já salvo (por reply ou "corrige, era X").
-    if (dados.tipo === 'correcao') {
-      if (!alvoCorrecao) {
-        await responder(chaveRemetente, '🤔 Não encontrei nenhum lançamento recente seu para corrigir. Você poderia me enviar os dados completos novamente, por favor?');
-        return;
-      }
-      try {
-        const resultado = await aplicarCorrecao(alvoCorrecao, dados);
-        await responder(
-          chaveRemetente,
-          `✏️ *Lançamento corrigido!*\n${rotuloCampo(resultado.campo)}: ${formatarValorCampo(resultado.campo, resultado.novoValor)}`
-        );
-        console.log(`✏️  Correção aplicada: ${resultado.campo} → ${resultado.novoValor}`);
-      } catch (err) {
-        console.error('Erro ao aplicar correção:', err.message);
-        await responder(chaveRemetente, '⚠️ Entendi a correção, mas tive um problema ao salvar. Você poderia tentar novamente, por favor?');
-      }
-      return;
-    }
-
-    // Exclusão de um lançamento já salvo (por reply ou "apaga esse lançamento").
-    // Vai pra lixeira (soft-delete), igual ao botão excluir do site — dá pra
-    // restaurar lá se for engano.
-    if (dados.tipo === 'exclusao') {
-      if (!alvoCorrecao) {
-        await responder(chaveRemetente, '🤔 Não encontrei nenhum lançamento recente seu para excluir. Você poderia responder à mensagem de confirmação dele, por favor?');
-        return;
-      }
-      try {
-        const registro = await excluirRegistro(alvoCorrecao, nomeRemetente);
-        await responder(
-          chaveRemetente,
-          `🗑️ *Lançamento excluído!*${registro?.descricao ? `\n📝 ${registro.descricao}` : ''}\n_(foi pra lixeira — dá pra restaurar no site se foi engano)_`
-        );
-        console.log('🗑️  Lançamento excluído via WhatsApp.');
-      } catch (err) {
-        console.error('Erro ao excluir lançamento:', err.message);
-        await responder(chaveRemetente, '⚠️ Entendi que você quer excluir, mas tive um problema. Você poderia tentar novamente, por favor?');
-      }
-      return;
-    }
-
-    // Rede de segurança: gasto_alimentacao/recarga_alimentacao não podem cair
-    // no cartão alimentação errado quando há mais de um cadastrado (ver
-    // resolverCartaoAlimentacaoAmbiguo).
-    if ((!dados.faltando || dados.faltando.length === 0) && dados.tipo) {
-      const perguntaCartaoAlimentacao = await resolverCartaoAlimentacaoAmbiguo(dados);
-      if (perguntaCartaoAlimentacao) {
-        dados.faltando = ['cartao'];
-        dados.pergunta = perguntaCartaoAlimentacao;
-      }
-    }
-
-    // Ainda falta alguma informação: pergunta e guarda o estado pra continuar depois.
-    if (dados.faltando && dados.faltando.length > 0) {
-      console.log(`❓ Faltando [${dados.faltando.join(', ')}], perguntando: "${dados.pergunta}"`);
-      await salvarPendencia(chaveRemetente, 'aguardando_campos', dados);
-      if (dados.pergunta) {
-        await responder(chaveRemetente, dados.pergunta);
-      }
-      return;
-    }
-
-    // Rede de segurança final: só entra no switch de salvar (mais abaixo) um
-    // tipo que o código realmente sabe gravar. Sem isso, qualquer tipo que a
-    // IA inventasse ou um caso não prontamente tratado cairia no "default" do
-    // switch, que salva como um "gasto" comum — ou seja, silenciosamente
-    // lançaria uma despesa errada em vez de admitir que não sabe fazer aquilo.
-    // Aqui o bot prefere dizer "não sei fazer isso" a fingir que entendeu.
-    const TIPOS_LANCAMENTO_SUPORTADOS = [
-      'gasto',
-      'entrada',
-      'conta_fixa',
-      'compra_cartao',
-      'parcelamento',
-      'meta',
-      'orcamento',
-      'gasto_alimentacao',
-      'recarga_alimentacao',
-      'cadastro_cartao',
-    ];
-    if (!TIPOS_LANCAMENTO_SUPORTADOS.includes(dados.tipo)) {
-      console.warn(`⚠️  Tipo não suportado retornado pela IA: ${JSON.stringify(dados.tipo)}`);
-      await responder(
-        chaveRemetente,
-        '🤔 Entendi que você quer registrar algo, mas isso ainda não é uma função que eu sei fazer no sistema. Você poderia descrever de outro jeito, por favor (ex: um gasto, uma conta fixa, um cartão, uma meta)?'
-      );
-      return;
-    }
-
-    // A IA disse que está completo — ainda assim revalida antes de salvar (ela
-    // pode errar). Se achar algo inválido, volta pro fluxo de pergunta. Se
-    // estiver tudo certo, salva direto — corrigir depois é fácil (respondendo
-    // a confirmação ou dizendo "corrige, era X"), então não precisa confirmar antes.
-    const { valido, invalidos } = validarDados(dados);
-    if (!valido) {
-      console.log(`⚠️  Validação encontrou campo(s) inválido(s): ${invalidos.join(', ')}`);
-      dados.faltando = invalidos;
-      dados.pergunta = PERGUNTAS_POR_CAMPO[invalidos[0]] || `Você poderia confirmar, por favor: ${invalidos.join(', ')}?`;
-      await salvarPendencia(chaveRemetente, 'aguardando_campos', dados);
-      await responder(chaveRemetente, dados.pergunta);
-      return;
-    }
-
+  // "Pergunta" sobre saldo/resumo: responde na hora, sem gravar nada no banco.
+  if (dados.tipo === 'consulta_saldo') {
     try {
-      let registro;
-      let cartaoMsg;
-
-      switch (dados.tipo) {
-        case 'conta_fixa':
-          registro = await salvarContaFixa(dados);
-          cartaoMsg = montarCartaoContaFixa(registro);
-          break;
-        case 'compra_cartao':
-          registro = await salvarCompraCartao(dados);
-          cartaoMsg = montarCartaoCompraCartao(registro);
-          break;
-        case 'parcelamento':
-          registro = await salvarParcelamento(dados);
-          cartaoMsg = montarCartaoParcelamento(registro);
-          break;
-        case 'meta':
-          registro = await salvarMeta(dados);
-          cartaoMsg = montarCartaoMeta(registro);
-          break;
-        case 'orcamento':
-          registro = await salvarOrcamento(dados);
-          cartaoMsg = montarCartaoOrcamento(registro);
-          break;
-        case 'gasto_alimentacao':
-          registro = await salvarGastoAlimentacao(dados);
-          cartaoMsg = montarCartaoGastoAlimentacao(registro);
-          break;
-        case 'recarga_alimentacao':
-          registro = await salvarRecargaAlimentacao(dados);
-          cartaoMsg = montarCartaoRecargaAlimentacao(registro);
-          break;
-        case 'cadastro_cartao':
-          registro = await salvarCartao(dados);
-          cartaoMsg = montarCartaoCadastroCartao(registro);
-          break;
-        default: // 'gasto' ou 'entrada'
-          registro = await salvarTransacao(dados);
-          cartaoMsg = montarCartao(registro, dados.tipo);
-      }
-
-      if (dados.comentario) await responder(chaveRemetente, dados.comentario);
-      const mensagemEnviada = await responder(chaveRemetente, cartaoMsg);
-      await lembrarRegistro({
-        chaveRemetente,
-        mensagemEnviada,
-        tabela: tabelaDoTipo(dados.tipo),
-        registroId: registro?.id,
-      });
-      console.log('✅ Lançamento registrado e confirmado no grupo.');
+      const texto =
+        dados.escopo === 'alimentacao'
+          ? await gerarResumoCartaoAlimentacao()
+          : await gerarResumoGeral(dados.periodo === 'anterior' ? 'anterior' : 'atual');
+      await enviarResposta(texto);
+      console.log('📊 Resumo enviado sob demanda.');
     } catch (err) {
-      console.error('Erro ao salvar/confirmar lançamento:', err.message);
-      try {
-        await responder(chaveRemetente, '⚠️ Entendi o lançamento, mas tive um problema ao salvar no sistema. Você poderia tentar novamente em instantes, por favor?');
-      } catch (e2) {
-        console.error('Erro ao avisar sobre falha ao salvar:', e2.message);
+      console.error('Erro ao gerar resumo sob demanda:', err.message);
+    }
+    return;
+  }
+
+  // "Pergunta" sobre o consumo de IA do próprio bot (não é sobre dinheiro).
+  if (dados.tipo === 'consulta_uso_ia') {
+    try {
+      await enviarResposta(await gerarResumoUsoIA());
+      console.log('📊 Resumo de uso de IA enviado sob demanda.');
+    } catch (err) {
+      console.error('Erro ao gerar resumo de uso de IA:', err.message);
+    }
+    return;
+  }
+
+  // "Pergunta" sobre o limite diário gratuito dos provedores (cota da API, não custo).
+  if (dados.tipo === 'consulta_limite_provedores') {
+    try {
+      await enviarResposta(await gerarResumoLimitesGratuitos());
+      console.log('📊 Resumo de limite dos provedores enviado sob demanda.');
+    } catch (err) {
+      console.error('Erro ao gerar resumo de limite dos provedores:', err.message);
+    }
+    return;
+  }
+
+  // "Pergunta" sobre a lista de contas fixas cadastradas e seus vencimentos.
+  if (dados.tipo === 'consulta_contas_fixas') {
+    try {
+      await enviarResposta(await gerarResumoContasFixas());
+      console.log('📋 Resumo de contas fixas enviado sob demanda.');
+    } catch (err) {
+      console.error('Erro ao gerar resumo de contas fixas:', err.message);
+    }
+    return;
+  }
+
+  // Confirmação de pagamento de uma conta fixa já cadastrada (marca o ciclo
+  // atual como pago — não cria gasto novo nem conta nova).
+  if (dados.tipo === 'pagamento_conta_fixa') {
+    try {
+      const resultado = await salvarPagamentoContaFixa(dados);
+      if (resultado.jaEstavaPago) {
+        await enviarResposta(`✅ *${resultado.conta.descricao}* já estava marcada como paga esse mês.`);
+      } else {
+        await enviarResposta(
+          `✅ *${resultado.conta.descricao}* marcada como paga!\n📅 Referente ao vencimento de ${resultado.vencimento.toFormat('dd/MM')}.`
+        );
       }
+      console.log(`💰 Pagamento de conta fixa registrado: ${resultado.conta.descricao}`);
+    } catch (err) {
+      console.error('Erro ao registrar pagamento de conta fixa:', err.message);
+      await enviarResposta(
+        `🤔 Não encontrei "${dados.descricao}" entre as contas fixas cadastradas. Você poderia confirmar o nome certo, por favor?`
+      );
+    }
+    return;
+  }
+
+  // Correção de um lançamento já salvo (por reply ou "corrige, era X").
+  if (dados.tipo === 'correcao') {
+    if (!alvoCorrecao) {
+      await enviarResposta('🤔 Não encontrei nenhum lançamento recente seu para corrigir. Você poderia me enviar os dados completos novamente, por favor?');
+      return;
+    }
+    try {
+      const resultado = await aplicarCorrecao(alvoCorrecao, dados);
+      await enviarResposta(
+        `✏️ *Lançamento corrigido!*\n${rotuloCampo(resultado.campo)}: ${formatarValorCampo(resultado.campo, resultado.novoValor)}`
+      );
+      console.log(`✏️  Correção aplicada: ${resultado.campo} → ${resultado.novoValor}`);
+    } catch (err) {
+      console.error('Erro ao aplicar correção:', err.message);
+      await enviarResposta('⚠️ Entendi a correção, mas tive um problema ao salvar. Você poderia tentar novamente, por favor?');
+    }
+    return;
+  }
+
+  // Exclusão de um lançamento já salvo (por reply ou "apaga esse lançamento").
+  // Vai pra lixeira (soft-delete), igual ao botão excluir do site — dá pra
+  // restaurar lá se for engano.
+  if (dados.tipo === 'exclusao') {
+    if (!alvoCorrecao) {
+      await enviarResposta('🤔 Não encontrei nenhum lançamento recente seu para excluir. Você poderia responder à mensagem de confirmação dele, por favor?');
+      return;
+    }
+    try {
+      const registro = await excluirRegistro(alvoCorrecao, nomeRemetente);
+      await enviarResposta(
+        `🗑️ *Lançamento excluído!*${registro?.descricao ? `\n📝 ${registro.descricao}` : ''}\n_(foi pra lixeira — dá pra restaurar no site se foi engano)_`
+      );
+      console.log('🗑️  Lançamento excluído.');
+    } catch (err) {
+      console.error('Erro ao excluir lançamento:', err.message);
+      await enviarResposta('⚠️ Entendi que você quer excluir, mas tive um problema. Você poderia tentar novamente, por favor?');
+    }
+    return;
+  }
+
+  // Rede de segurança: gasto_alimentacao/recarga_alimentacao não podem cair
+  // no cartão alimentação errado quando há mais de um cadastrado (ver
+  // resolverCartaoAlimentacaoAmbiguo).
+  if ((!dados.faltando || dados.faltando.length === 0) && dados.tipo) {
+    const perguntaCartaoAlimentacao = await resolverCartaoAlimentacaoAmbiguo(dados);
+    if (perguntaCartaoAlimentacao) {
+      dados.faltando = ['cartao'];
+      dados.pergunta = perguntaCartaoAlimentacao;
+    }
+  }
+
+  // Ainda falta alguma informação: pergunta e guarda o estado pra continuar depois.
+  if (dados.faltando && dados.faltando.length > 0) {
+    console.log(`❓ Faltando [${dados.faltando.join(', ')}], perguntando: "${dados.pergunta}"`);
+    await salvarPendencia(chaveRemetente, 'aguardando_campos', dados);
+    if (dados.pergunta) {
+      await enviarResposta(dados.pergunta);
+    }
+    return;
+  }
+
+  // Rede de segurança final: só entra no switch de salvar (mais abaixo) um
+  // tipo que o código realmente sabe gravar. Sem isso, qualquer tipo que a
+  // IA inventasse ou um caso não prontamente tratado cairia no "default" do
+  // switch, que salva como um "gasto" comum — ou seja, silenciosamente
+  // lançaria uma despesa errada em vez de admitir que não sabe fazer aquilo.
+  // Aqui o bot prefere dizer "não sei fazer isso" a fingir que entendeu.
+  const TIPOS_LANCAMENTO_SUPORTADOS = [
+    'gasto',
+    'entrada',
+    'conta_fixa',
+    'compra_cartao',
+    'parcelamento',
+    'meta',
+    'orcamento',
+    'gasto_alimentacao',
+    'recarga_alimentacao',
+    'cadastro_cartao',
+  ];
+  if (!TIPOS_LANCAMENTO_SUPORTADOS.includes(dados.tipo)) {
+    console.warn(`⚠️  Tipo não suportado retornado pela IA: ${JSON.stringify(dados.tipo)}`);
+    await enviarResposta(
+      '🤔 Entendi que você quer registrar algo, mas isso ainda não é uma função que eu sei fazer no sistema. Você poderia descrever de outro jeito, por favor (ex: um gasto, uma conta fixa, um cartão, uma meta)?'
+    );
+    return;
+  }
+
+  // A IA disse que está completo — ainda assim revalida antes de salvar (ela
+  // pode errar). Se achar algo inválido, volta pro fluxo de pergunta. Se
+  // estiver tudo certo, salva direto — corrigir depois é fácil (respondendo
+  // a confirmação ou dizendo "corrige, era X"), então não precisa confirmar antes.
+  const { valido, invalidos } = validarDados(dados);
+  if (!valido) {
+    console.log(`⚠️  Validação encontrou campo(s) inválido(s): ${invalidos.join(', ')}`);
+    dados.faltando = invalidos;
+    dados.pergunta = PERGUNTAS_POR_CAMPO[invalidos[0]] || `Você poderia confirmar, por favor: ${invalidos.join(', ')}?`;
+    await salvarPendencia(chaveRemetente, 'aguardando_campos', dados);
+    await enviarResposta(dados.pergunta);
+    return;
+  }
+
+  try {
+    let registro;
+    let cartaoMsg;
+
+    switch (dados.tipo) {
+      case 'conta_fixa':
+        registro = await salvarContaFixa(dados);
+        cartaoMsg = montarCartaoContaFixa(registro);
+        break;
+      case 'compra_cartao':
+        registro = await salvarCompraCartao(dados);
+        cartaoMsg = montarCartaoCompraCartao(registro);
+        break;
+      case 'parcelamento':
+        registro = await salvarParcelamento(dados);
+        cartaoMsg = montarCartaoParcelamento(registro);
+        break;
+      case 'meta':
+        registro = await salvarMeta(dados);
+        cartaoMsg = montarCartaoMeta(registro);
+        break;
+      case 'orcamento':
+        registro = await salvarOrcamento(dados);
+        cartaoMsg = montarCartaoOrcamento(registro);
+        break;
+      case 'gasto_alimentacao':
+        registro = await salvarGastoAlimentacao(dados);
+        cartaoMsg = montarCartaoGastoAlimentacao(registro);
+        break;
+      case 'recarga_alimentacao':
+        registro = await salvarRecargaAlimentacao(dados);
+        cartaoMsg = montarCartaoRecargaAlimentacao(registro);
+        break;
+      case 'cadastro_cartao':
+        registro = await salvarCartao(dados);
+        cartaoMsg = montarCartaoCadastroCartao(registro);
+        break;
+      default: // 'gasto' ou 'entrada'
+        registro = await salvarTransacao(dados);
+        cartaoMsg = montarCartao(registro, dados.tipo);
+    }
+
+    if (dados.comentario) await enviarResposta(dados.comentario);
+    const mensagemEnviada = await enviarResposta(cartaoMsg);
+    await lembrarRegistro({
+      chaveRemetente,
+      mensagemEnviada,
+      tabela: tabelaDoTipo(dados.tipo),
+      registroId: registro?.id,
+    });
+    console.log('✅ Lançamento registrado e confirmado.');
+  } catch (err) {
+    console.error('Erro ao salvar/confirmar lançamento:', err.message);
+    try {
+      await enviarResposta('⚠️ Entendi o lançamento, mas tive um problema ao salvar no sistema. Você poderia tentar novamente em instantes, por favor?');
+    } catch (e2) {
+      console.error('Erro ao avisar sobre falha ao salvar:', e2.message);
     }
   }
 }
 
-// ===================== Servidor HTTP (healthcheck + envio manual) =====================
+// ===================== Servidor HTTP (healthcheck + envio manual + chat do site) =====================
+// O app React roda em outro domínio (GitHub Pages) e chama este servidor
+// direto do navegador pro endpoint /chat — sem essas respostas, o navegador
+// bloqueia a chamada antes mesmo dela sair (CORS).
+const ORIGEM_APP_PERMITIDA = process.env.ORIGEM_APP_PERMITIDA || 'https://jefsantana.github.io';
+
 function iniciarServidorHttp() {
   const app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', ORIGEM_APP_PERMITIDA);
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
 
   app.get('/status', (req, res) => {
     res.json({
@@ -2590,6 +2705,83 @@ function iniciarServidorHttp() {
       res.json({ sucesso: true });
     } catch (err) {
       res.status(500).json({ erro: err.message });
+    }
+  });
+
+  // Chat de lançamento pelo site: mesma "IA financeira" do WhatsApp, só que
+  // autenticado pelo login do Supabase em vez do grupo do WhatsApp. Cada
+  // pessoa logada vira uma "conversa" própria (chaveRemetente = "web:<id do
+  // usuário>"), com a mesma memória de curto prazo e as mesmas pendências de
+  // campo faltando que já existem pro WhatsApp — só que aqui a resposta
+  // volta na própria requisição HTTP, em vez de ir pro grupo.
+  app.post('/chat', async (req, res) => {
+    const cabecalho = req.headers.authorization || '';
+    const token = cabecalho.startsWith('Bearer ') ? cabecalho.slice(7) : null;
+    if (!token) return res.status(401).json({ erro: 'Token de autenticação ausente.' });
+
+    const { data: dadosUsuario, error: erroAuth } = await supabase.auth.getUser(token);
+    if (erroAuth || !dadosUsuario?.user) {
+      return res.status(401).json({ erro: 'Sessão inválida ou expirada — faça login novamente.' });
+    }
+
+    const { data: perfil, error: erroPerfil } = await supabase
+      .from('perfis')
+      .select('familia_id')
+      .eq('id', dadosUsuario.user.id)
+      .maybeSingle();
+    if (erroPerfil || !perfil) return res.status(403).json({ erro: 'Perfil não encontrado.' });
+    // Este bot atende só a família configurada em FAMILIA_ID — outra
+    // família logada nunca deveria conseguir lançar aqui.
+    if (perfil.familia_id !== FAMILIA_ID) {
+      return res.status(403).json({ erro: 'Esta conta não pertence à família atendida por este assistente.' });
+    }
+
+    const { mensagem, pessoa } = req.body;
+    const textoMensagem = (mensagem || '').trim();
+    if (!textoMensagem) return res.status(400).json({ erro: "Campo 'mensagem' é obrigatório." });
+    if (!PESSOAS_VALIDAS.includes(pessoa)) {
+      return res.status(400).json({ erro: `Campo 'pessoa' precisa ser um de: ${PESSOAS_VALIDAS.join(', ')}.` });
+    }
+
+    const chaveRemetente = `web:${dadosUsuario.user.id}`;
+    const respostas = [];
+    const enviarResposta = async (texto) => {
+      if (texto) {
+        respostas.push(texto);
+        registrarHistorico(chaveRemetente, 'bot', texto);
+      }
+      return null;
+    };
+
+    try {
+      let dados;
+      const pendente = await buscarPendencia(chaveRemetente);
+
+      if (pendente) {
+        if (/^cancela(r)?$/i.test(textoMensagem)) {
+          await apagarPendencia(chaveRemetente);
+          registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+          return res.json({ respostas: ['Certo, cancelado! 👍'] });
+        }
+        try {
+          dados = await continuarComResposta(pendente.dados, textoMensagem, pessoa, chaveRemetente);
+          registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+          await apagarPendencia(chaveRemetente);
+        } catch (err) {
+          console.error('Erro ao continuar lançamento pendente (chat):', err.message);
+          return res.json({ respostas: ['🤔 Desculpe, não entendi bem sua resposta. Você poderia tentar novamente, com outras palavras, por favor?'] });
+        }
+      } else {
+        dados = await interpretarMensagem(textoMensagem, pessoa, null, chaveRemetente);
+        registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+      }
+
+      const alvoCorrecao = await buscarAlvoCorrecao(null, chaveRemetente);
+      await finalizarLancamento(dados, { chaveRemetente, nomeRemetente: pessoa, alvoCorrecao, enviarResposta });
+      res.json({ respostas });
+    } catch (err) {
+      console.error('Erro no /chat:', err.message);
+      res.status(500).json({ erro: 'Não consegui processar sua mensagem agora. Você poderia tentar novamente em instantes, por favor?' });
     }
   });
 
