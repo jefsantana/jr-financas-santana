@@ -1,4 +1,4 @@
-# Sistema Financeiro Familiar — App
+# JR Finanças Santana — App
 
 Aplicativo React deste projeto. Veja a documentação completa (funcionalidades, tecnologias, como rodar) no [README principal](../README.md).
 

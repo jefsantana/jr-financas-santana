@@ -59,7 +59,7 @@ export function exportarCsv({ linhas, totalEntradas, totalGastos, nomeArquivo })
 export async function exportarExcel({ titulo, periodo, linhas, totalEntradas, totalGastos, nomeArquivo }) {
   const { default: ExcelJS } = await import('exceljs');
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Sistema Financeiro Familiar';
+  workbook.creator = 'JR Finanças Santana';
   workbook.created = new Date();
 
   const planilha = workbook.addWorksheet('Lançamentos', {

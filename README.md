@@ -1,4 +1,4 @@
-# 💜 Sistema Financeiro Familiar
+# 💜 JR Finanças Santana
 
 Aplicativo web de controle financeiro para a família — lançamentos, cartões, parcelamentos, orçamentos, metas e relatórios, tudo num só lugar, com dados isolados e seguros por família.
 
