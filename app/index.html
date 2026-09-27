@@ -8,19 +8,24 @@
 
     <!-- Instalável como app (PWA). O <link rel="manifest"> e o registro do
          service worker são injetados no build pelo vite-plugin-pwa. -->
-    <meta name="application-name" content="Controle Financeiro" />
+    <meta name="application-name" content="JR - Finanças" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Financeiro" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <!-- iOS ignora o "name"/"short_name" do manifest.json ao criar o atalho
+         via "Adicionar à Tela de Início" — usa esta tag aqui como nome. -->
+    <meta name="apple-mobile-web-app-title" content="JR - Finanças" />
+    <!-- iOS não renderiza SVG em apple-touch-icon de forma confiável (fica
+         em branco/com ícone genérico em várias versões) — por isso é PNG,
+         diferente do favicon da aba (que pode continuar sendo SVG). -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <title>Jeferson &amp; Raquel · Controle Financeiro</title>
+    <title>JR - Finanças</title>
   </head>
   <body>
     <div id="root"></div>

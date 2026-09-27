@@ -10,10 +10,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.svg', 'pwa-maskable.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Jeferson & Raquel · Controle Financeiro',
-        short_name: 'Financeiro',
+        name: 'JR - Finanças',
+        short_name: 'JR - Finanças',
         description: 'Controle financeiro da família — lançamentos, cartões, parcelamentos, orçamentos, metas e relatórios.',
         lang: 'pt-BR',
         dir: 'ltr',
@@ -23,8 +23,10 @@ export default defineConfig({
         background_color: '#7B61FF',
         categories: ['finance', 'productivity'],
         icons: [
-          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: 'pwa-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
