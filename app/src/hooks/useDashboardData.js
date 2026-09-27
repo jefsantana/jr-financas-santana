@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listar, nomeTabela } from '../services/dados.js';
 import { supabase } from '../services/supabase.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -23,6 +23,7 @@ export function useDashboardData() {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  const idInstanciaRef = useRef(Math.random().toString(36).slice(2));
 
   const recarregar = useCallback(async () => {
     setCarregando(true);
@@ -73,7 +74,7 @@ export function useDashboardData() {
   // mudança em qualquer uma delas recarrega o resumo inteiro.
   useEffect(() => {
     if (!perfil?.familia_id) return;
-    let canal = supabase.channel(`realtime-dashboard-${perfil.familia_id}`);
+    let canal = supabase.channel(`realtime-dashboard-${perfil.familia_id}-${idInstanciaRef.current}`);
     for (const tabela of TABELAS) {
       canal = canal.on(
         'postgres_changes',

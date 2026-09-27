@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as api from '../services/dados.js';
 import { supabase } from '../services/supabase.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -8,6 +8,12 @@ export function useCrudMock(tabela) {
   const { perfil } = useAuth();
   const toast = useToast();
   const [registros, setRegistros] = useState([]);
+  // Sufixo único por instância do hook: duas telas que usam a mesma tabela
+  // (ex: "Gastos" e "Cartões" ambas lendo "Cartoes") não podem dividir o
+  // nome do canal — se uma sai de tela enquanto a outra entra, o Supabase
+  // reaproveita o canal antigo (ainda se desinscrevendo) em vez de criar um
+  // novo, e o `.on()` da tela nova quebra com "... after subscribe()".
+  const idInstanciaRef = useRef(Math.random().toString(36).slice(2));
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
@@ -37,7 +43,7 @@ export function useCrudMock(tabela) {
     if (!perfil?.familia_id) return;
     const nomeTab = api.nomeTabela(tabela);
     const canal = supabase
-      .channel(`realtime-${nomeTab}-${perfil.familia_id}`)
+      .channel(`realtime-${nomeTab}-${perfil.familia_id}-${idInstanciaRef.current}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: nomeTab, filter: `familia_id=eq.${perfil.familia_id}` },
