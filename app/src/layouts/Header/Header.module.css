@@ -9,7 +9,16 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  backdrop-filter: blur(6px);
+  /* O fundo aqui já é uma cor sólida (sem transparência), então o
+     "backdrop-filter: blur" que existia não tinha efeito visual nenhum —
+     só ficava lá arriscando o mesmo bug da barra de baixo: em Chrome
+     Android, "position: sticky/fixed" junto com "backdrop-filter" faz o
+     navegador atrasar o repaint durante rolagem rápida, e o cabeçalho
+     (com o botão de abrir o menu) some da tela até o scroll parar. As
+     mesmas camadas de composição da barra de baixo evitam isso aqui. */
+  transform: translateZ(0);
+  will-change: transform;
+  isolation: isolate;
 }
 
 .grupoEsquerda {
