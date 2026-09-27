@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, User, Camera, Mic, Square } from 'lucide-react';
+import { Send, User, Camera, Mic, X } from 'lucide-react';
 import { MascoteAssistente } from './MascoteAssistente.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
@@ -23,6 +23,12 @@ function lerComoBase64(arquivo) {
   });
 }
 
+function formatarDuracao(segundos) {
+  const m = Math.floor(segundos / 60);
+  const s = segundos % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function ChatAssistente({ aoAbrirManual }) {
   const { sessao, pessoas } = useAuth();
   const toast = useToast();
@@ -32,14 +38,31 @@ export function ChatAssistente({ aoAbrirManual }) {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [gravando, setGravando] = useState(false);
+  const [duracaoGravacao, setDuracaoGravacao] = useState(0);
   const fimDaListaRef = useRef(null);
   const inputImagemRef = useRef(null);
   const gravadorRef = useRef(null);
+  const streamRef = useRef(null);
   const pedacosAudioRef = useRef([]);
+  const canceladoRef = useRef(false);
 
   useEffect(() => {
     fimDaListaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [mensagens]);
+
+  // Solta o dedo/mouse em QUALQUER lugar da tela (não só em cima do botão) já
+  // encerra a gravação e envia — igual o WhatsApp: segurar grava, soltar envia.
+  useEffect(() => {
+    if (!gravando) return;
+    const aoSoltar = () => pararGravacao({ cancelar: false });
+    window.addEventListener('pointerup', aoSoltar);
+    const cronometro = setInterval(() => setDuracaoGravacao((d) => d + 1), 1000);
+    return () => {
+      window.removeEventListener('pointerup', aoSoltar);
+      clearInterval(cronometro);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gravando]);
 
   // Núcleo comum: manda o payload pro /chat (texto, imagem ou áudio — o que
   // muda é só o corpo da requisição) e traduz a resposta em bolhas do bot.
@@ -102,25 +125,30 @@ export function ChatAssistente({ aoAbrirManual }) {
     await enviarAoBot({ imagemBase64, imagemMimetype: arquivo.type || 'image/jpeg', legenda: '' });
   }
 
-  async function alternarGravacao() {
-    if (gravando) {
-      gravadorRef.current?.stop();
-      return;
-    }
+  async function iniciarGravacao(evento) {
+    evento.preventDefault();
+    if (enviando || gravando || texto.trim()) return;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const gravador = new MediaRecorder(stream);
       pedacosAudioRef.current = [];
+      canceladoRef.current = false;
+      streamRef.current = stream;
 
-      gravador.ondataavailable = (evento) => {
-        if (evento.data.size > 0) pedacosAudioRef.current.push(evento.data);
+      gravador.ondataavailable = (e) => {
+        if (e.data.size > 0) pedacosAudioRef.current.push(e.data);
       };
 
       gravador.onstop = async () => {
-        stream.getTracks().forEach((faixa) => faixa.stop());
+        streamRef.current?.getTracks().forEach((faixa) => faixa.stop());
         setGravando(false);
+        setDuracaoGravacao(0);
 
+        if (canceladoRef.current) {
+          pedacosAudioRef.current = [];
+          return;
+        }
         const blob = new Blob(pedacosAudioRef.current, { type: gravador.mimeType || 'audio/webm' });
         if (blob.size === 0) return;
 
@@ -135,6 +163,12 @@ export function ChatAssistente({ aoAbrirManual }) {
     } catch {
       toast.erro('Não consegui acessar o microfone. Verifique a permissão do navegador.');
     }
+  }
+
+  function pararGravacao({ cancelar }) {
+    if (!gravadorRef.current || gravadorRef.current.state === 'inactive') return;
+    canceladoRef.current = cancelar;
+    gravadorRef.current.stop();
   }
 
   return (
@@ -199,42 +233,61 @@ export function ChatAssistente({ aoAbrirManual }) {
           hidden
           onChange={aoSelecionarImagem}
         />
-        <button
-          type="button"
-          className={styles.botaoSecundario}
-          onClick={() => inputImagemRef.current?.click()}
-          disabled={enviando || gravando}
-          aria-label="Enviar foto de comprovante"
-          title="Enviar foto de comprovante"
-        >
-          <Camera size={18} />
-        </button>
-        <button
-          type="button"
-          className={`${styles.botaoSecundario} ${gravando ? styles.botaoGravando : ''}`}
-          onClick={alternarGravacao}
-          disabled={enviando}
-          aria-label={gravando ? 'Parar gravação' : 'Gravar áudio'}
-          title={gravando ? 'Parar gravação' : 'Gravar áudio'}
-        >
-          {gravando ? <Square size={16} /> : <Mic size={18} />}
-        </button>
-        <input
-          className={styles.campoTexto}
-          type="text"
-          placeholder={gravando ? 'Gravando áudio...' : 'Ex: gastei 45 no mercado, no pix'}
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          disabled={enviando || gravando}
-        />
-        <button
-          type="submit"
-          className={styles.botaoEnviar}
-          disabled={!texto.trim() || enviando || gravando}
-          aria-label="Enviar"
-        >
-          <Send size={18} />
-        </button>
+
+        {gravando ? (
+          <div className={styles.faixaGravando}>
+            <button
+              type="button"
+              className={styles.botaoCancelarGravacao}
+              onClick={() => pararGravacao({ cancelar: true })}
+              aria-label="Cancelar gravação"
+            >
+              <X size={16} />
+            </button>
+            <span className={styles.pontoGravando} />
+            <span className={styles.duracaoGravando}>{formatarDuracao(duracaoGravacao)}</span>
+            <span className={styles.dicaGravando}>Solte para enviar</span>
+          </div>
+        ) : (
+          <input
+            className={styles.campoTexto}
+            type="text"
+            placeholder="Ex: gastei 45 no mercado, no pix"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            disabled={enviando}
+          />
+        )}
+
+        {!texto.trim() && !gravando && (
+          <button
+            type="button"
+            className={styles.botaoSecundario}
+            onClick={() => inputImagemRef.current?.click()}
+            disabled={enviando}
+            aria-label="Enviar foto de comprovante"
+            title="Enviar foto de comprovante"
+          >
+            <Camera size={18} />
+          </button>
+        )}
+
+        {texto.trim() ? (
+          <button type="submit" className={styles.botaoEnviar} disabled={enviando} aria-label="Enviar">
+            <Send size={18} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`${styles.botaoEnviar} ${gravando ? styles.botaoGravandoAtivo : ''}`}
+            onPointerDown={iniciarGravacao}
+            disabled={enviando}
+            aria-label="Segure para gravar um áudio"
+            title="Segure para gravar um áudio"
+          >
+            <Mic size={18} />
+          </button>
+        )}
       </form>
 
       {aoAbrirManual && (

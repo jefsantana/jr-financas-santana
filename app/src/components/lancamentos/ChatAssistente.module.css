@@ -188,15 +188,67 @@
   opacity: 0.5;
 }
 
-.botaoGravando {
-  background: var(--cor-perigo);
-  color: #fff;
-  animation: pulsarGravacao 1.2s infinite ease-in-out;
+/* Faixa que substitui o campo de texto enquanto grava — mesmo lugar,
+   mesma largura, só troca o conteúdo (igual o WhatsApp). */
+.faixaGravando {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  padding: 0 var(--espaco-sm) 0 4px;
+  background: var(--cor-superficie);
 }
 
-@keyframes pulsarGravacao {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+.botaoCancelarGravacao {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--cor-texto-secundario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.botaoCancelarGravacao:hover {
+  background: var(--cor-fundo);
+  color: var(--cor-perigo);
+}
+
+.pontoGravando {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--cor-perigo);
+  animation: pulsarPonto 1.2s infinite ease-in-out;
+}
+
+@keyframes pulsarPonto {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.duracaoGravando {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  color: var(--cor-texto);
+  font-weight: 600;
+}
+
+.dicaGravando {
+  flex: 1;
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--cor-texto-secundario);
+}
+
+.botaoGravandoAtivo {
+  background: var(--cor-perigo);
+  transform: scale(1.08);
+  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.15);
 }
 
 .botaoEnviar {
@@ -209,7 +261,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  /* Evita o navegador tratar o "segurar" no botão de áudio como gesto de
+     rolagem/zoom no celular, e evita selecionar texto ao redor sem querer. */
+  touch-action: none;
+  user-select: none;
 }
 
 .botaoEnviar:hover:not(:disabled) {
