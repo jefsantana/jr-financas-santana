@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Plus } from 'lucide-react';
 import { Sidebar } from '../Sidebar/Sidebar.jsx';
 import { BottomNav } from '../BottomNav/BottomNav.jsx';
 import { Header } from '../Header/Header.jsx';
+import { IconeAssistente } from '../../components/lancamentos/IconeAssistente.jsx';
+import { AssistenteModal } from '../../components/lancamentos/AssistenteModal.jsx';
 import { NovoLancamentoModal } from '../../components/lancamentos/NovoLancamentoModal.jsx';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
 import { NAV_ITEMS } from '../../utils/constantes.js';
@@ -13,10 +14,16 @@ export function AppLayout() {
   const location = useLocation();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [sidebarRecolhida, setSidebarRecolhida] = useLocalStorage('sidebarRecolhida', false);
-  const [modalLancamentoAberto, setModalLancamentoAberto] = useState(false);
+  const [modalAssistenteAberto, setModalAssistenteAberto] = useState(false);
+  const [modalManualAberto, setModalManualAberto] = useState(false);
 
   const paginaAtual = NAV_ITEMS.find((item) => location.pathname.startsWith(item.path));
   const titulo = paginaAtual?.label || 'Dashboard';
+
+  function abrirManual() {
+    setModalAssistenteAberto(false);
+    setModalManualAberto(true);
+  }
 
   return (
     <>
@@ -37,15 +44,20 @@ export function AppLayout() {
       <button
         type="button"
         className={styles.fabDesktop}
-        onClick={() => setModalLancamentoAberto(true)}
-        aria-label="Novo lançamento"
+        onClick={() => setModalAssistenteAberto(true)}
+        aria-label="Lançar com o assistente"
       >
-        <Plus />
+        <IconeAssistente />
       </button>
 
-      <BottomNav aoAbrirNovoLancamento={() => setModalLancamentoAberto(true)} />
+      <BottomNav aoAbrirNovoLancamento={() => setModalAssistenteAberto(true)} />
 
-      <NovoLancamentoModal aberto={modalLancamentoAberto} aoFechar={() => setModalLancamentoAberto(false)} />
+      <AssistenteModal
+        aberto={modalAssistenteAberto}
+        aoFechar={() => setModalAssistenteAberto(false)}
+        aoAbrirManual={abrirManual}
+      />
+      <NovoLancamentoModal aberto={modalManualAberto} aoFechar={() => setModalManualAberto(false)} />
     </>
   );
 }

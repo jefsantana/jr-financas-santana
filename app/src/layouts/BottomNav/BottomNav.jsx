@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { IconeAssistente } from '../../components/lancamentos/IconeAssistente.jsx';
 import { NAV_ITEMS_MOBILE } from '../../utils/constantes.js';
 import { ICONES_NAV } from '../../utils/icones.js';
 import styles from './BottomNav.module.css';
@@ -14,8 +14,13 @@ export function BottomNav({ aoAbrirNovoLancamento }) {
       ))}
 
       <div className={styles.botaoCentral}>
-        <button type="button" className={styles.fab} onClick={aoAbrirNovoLancamento} aria-label="Novo lançamento">
-          <Plus />
+        <button
+          type="button"
+          className={styles.fab}
+          onClick={aoAbrirNovoLancamento}
+          aria-label="Lançar com o assistente"
+        >
+          <IconeAssistente />
         </button>
       </div>
 
