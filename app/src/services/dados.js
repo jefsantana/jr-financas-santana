@@ -26,7 +26,7 @@ function dadosParaSnake(dados) {
   return resultado;
 }
 
-function nomeTabela(tabela) {
+export function nomeTabela(tabela) {
   return paraSnake(tabela);
 }
 

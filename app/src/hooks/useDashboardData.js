@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listar } from '../services/dados.js';
+import { listar, nomeTabela } from '../services/dados.js';
+import { supabase } from '../services/supabase.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 const TABELAS = [
@@ -65,6 +66,26 @@ export function useDashboardData() {
   useEffect(() => {
     if (perfil?.familia_id) recarregar();
   }, [recarregar, perfil?.familia_id]);
+
+  // Tempo real: o Dashboard resume TODAS as tabelas acima — sem escutar
+  // mudanças nelas, um lançamento novo (manual, ou feito pelo assistente de
+  // IA por fora do app) só aparecia aqui depois de um F5. Uma pendência de
+  // mudança em qualquer uma delas recarrega o resumo inteiro.
+  useEffect(() => {
+    if (!perfil?.familia_id) return;
+    let canal = supabase.channel(`realtime-dashboard-${perfil.familia_id}`);
+    for (const tabela of TABELAS) {
+      canal = canal.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: nomeTabela(tabela), filter: `familia_id=eq.${perfil.familia_id}` },
+        () => recarregar()
+      );
+    }
+    canal.subscribe();
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [perfil?.familia_id, recarregar]);
 
   return { dados, carregando, erro, recarregar };
 }

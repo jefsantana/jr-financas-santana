@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import * as api from '../services/dados.js';
+import { supabase } from '../services/supabase.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
 
@@ -26,6 +27,27 @@ export function useCrudMock(tabela) {
   useEffect(() => {
     if (perfil?.familia_id) recarregar();
   }, [recarregar, perfil?.familia_id]);
+
+  // Tempo real: sem isso, um lançamento feito em outra aba, por outra
+  // pessoa da família, ou pelo assistente de IA (que grava direto no banco,
+  // por fora do app) só aparecia depois de um F5 — cada tela só recarregava
+  // sozinha quando VOCÊ MESMO salvava algo por ELA. Qualquer INSERT/UPDATE/
+  // DELETE na tabela (de qualquer origem) agora recarrega esta tela também.
+  useEffect(() => {
+    if (!perfil?.familia_id) return;
+    const nomeTab = api.nomeTabela(tabela);
+    const canal = supabase
+      .channel(`realtime-${nomeTab}-${perfil.familia_id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: nomeTab, filter: `familia_id=eq.${perfil.familia_id}` },
+        () => recarregar()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [tabela, perfil?.familia_id, recarregar]);
 
   const salvar = useCallback(
     async (dados) => {
