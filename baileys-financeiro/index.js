@@ -217,6 +217,8 @@ Se a mensagem citar "Gemini" ou "limite"/"cota" + "hoje"/"agora", é tipo 12. Se
 
 DESAMBIGUAÇÃO entre pagamento_conta_fixa (14) e correcao (16) — a pessoa dizer que "pagou" ou "quitou" algo é SEMPRE tipo 14 quando a conta bate com uma cadastrada, mesmo que venha logo após o bot ter perguntado outra coisa. Só é tipo 16 (correcao) se a pessoa estiver claramente apontando um ERRO num lançamento já feito (valor errado, categoria errada, cartão errado) — "confirmar que paguei" não é "corrigir um erro". Se a pessoa responder só o nome de uma conta cadastrada (ex: "financiamento") logo depois de o bot ter perguntado algo como "qual conta você pagou?", use o histórico da conversa pra entender que ela está completando a informação do pagamento, e classifique o conjunto como pagamento_conta_fixa com descricao = esse nome — não como correcao.
 
+DESAMBIGUAÇÃO entre conta_fixa (3) e pagamento_conta_fixa (14) quando a pessoa pede pra "ajustar"/"valer a partir do mês que vem" uma conta fixa que ela ACABOU de cadastrar (ou que já existe) — isso NUNCA é um pedido pra cadastrar outra conta fixa igual (isso duplicaria a conta, com o mesmo nome/valor/dia_vencimento). É sempre tipo 14 (pagamento_conta_fixa): a pessoa está avisando que já pagou o ciclo atual (por isso ele deve "valer só a partir do mês que vem"), então a ação certa é marcar o mês ATUAL como pago naquela mesma conta, com descricao = o nome dela (a que acabou de ser mencionada, ou a mais recente do histórico se a pessoa disser "esse/este último lançamento de conta fixa"). Ex: logo após cadastrar "Moradia, R$850, dia 24", a pessoa diz "esse último lançamento de conta fixa, ajusta pra valer a partir do mês que vem, já paguei esse mês" → tipo pagamento_conta_fixa, descricao "Moradia" — NÃO tipo conta_fixa de novo.
+
 DESAMBIGUAÇÃO entre cadastro_cartao (15) e compra_cartao (4) — "cadastro_cartao" é sobre o CARTÃO em si existir no sistema (nome, limite, datas de fatura), sem nenhum valor de compra envolvido. "compra_cartao" é sempre uma despesa específica (tem descrição do que foi comprado e valor gasto) usando um cartão que JÁ deveria existir. "adiciona um cartão pra mim" / "cadastra o Nubank" → cadastro_cartao. "comprei uma blusa no Nubank, 80 reais" → compra_cartao.
 
 DESAMBIGUAÇÃO entre correcao (16) e exclusao (17) — "correcao" AJUSTA um campo de um lançamento que continua existindo (valor errado, categoria errada, cartão errado). "exclusao" REMOVE o lançamento inteiro (a pessoa não queria aquilo registrado, foi engano, quer cancelar). Palavras como "apaga", "exclui", "remove", "cancela [algo já registrado]", "não era pra ter lançado" → exclusao. Palavras como "corrige", "era", "na verdade é", "o certo é" → correcao.
@@ -779,6 +781,20 @@ async function salvarTransacao(dados) {
 }
 
 async function salvarContaFixa(dados) {
+  // Rede de segurança: nunca cadastra uma 2ª conta fixa com o mesmo nome (a
+  // IA pode confundir um pedido de ajuste/pagamento com um cadastro novo —
+  // foi exatamente isso que gerou uma "Moradia" duplicada). Se já existe uma
+  // ativa com esse nome, devolve ela mesma em vez de duplicar.
+  const { data: existente, error: erroExistente } = await supabase
+    .from('contas_fixas')
+    .select('*')
+    .eq('familia_id', FAMILIA_ID)
+    .is('excluido_em', null)
+    .ilike('descricao', dados.descricao)
+    .maybeSingle();
+  if (erroExistente) throw new Error(`Supabase select (contas_fixas): ${erroExistente.message}`);
+  if (existente) return { ...existente, jaExistia: true };
+
   const { data, error } = await supabase
     .from('contas_fixas')
     .insert({
@@ -1213,6 +1229,12 @@ function montarCartao(registro, tipo) {
 }
 
 function montarCartaoContaFixa(registro) {
+  if (registro.jaExistia) {
+    return (
+      `ℹ️ Já existe uma conta fixa chamada *${registro.descricao}* (R$ ${formatarReais(registro.valor)}, vence dia ${registro.dia_vencimento}) — não criei outra.\n` +
+      `Se já pagou o ciclo deste mês e quer que ela só volte a contar a partir do mês que vem, é só dizer algo como "já paguei ${registro.descricao} esse mês".`
+    );
+  }
   return (
     `📋 *Conta Fixa Cadastrada*\n` +
     `📝 Descrição: ${registro.descricao}\n` +
