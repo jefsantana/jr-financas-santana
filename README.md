@@ -2,9 +2,9 @@
 
 Aplicativo web de controle financeiro para a família — lançamentos, cartões, parcelamentos, orçamentos, metas e relatórios, tudo num só lugar, com dados isolados e seguros por família.
 
-[![Site publicado](https://img.shields.io/badge/site-online-7B61FF)](https://sistema-financeiro-familiar-zeta.vercel.app/)
+[![Site publicado](https://img.shields.io/badge/site-online-7B61FF)](https://jr-financas-santana.vercel.app/)
 
-**🔗 Acesse: [sistema-financeiro-familiar-zeta.vercel.app](https://sistema-financeiro-familiar-zeta.vercel.app/)**
+**🔗 Acesse: [jr-financas-santana.vercel.app](https://jr-financas-santana.vercel.app/)**
 
 _Hospedado na Vercel (deploy automático a cada push na `main`)._
 
@@ -56,7 +56,7 @@ _Hospedado na Vercel (deploy automático a cada push na `main`)._
 | **Banco de dados** | Supabase (PostgreSQL + Auth + Row Level Security) |
 | **Exportação** | ExcelJS · jsPDF |
 | **Leitura de PDF** | pdfjs-dist |
-| **Deploy** | GitHub Actions → GitHub Pages |
+| **Deploy** | Vercel (deploy automático a cada push) |
 
 ---
 
@@ -71,8 +71,7 @@ _Hospedado na Vercel (deploy automático a cada push na `main`)._
 │       ├── pages/         # Uma pasta por tela do sistema
 │       ├── services/       # Acesso ao Supabase
 │       └── utils/          # Regras de negócio e formatação
-├── supabase/              # Schema do banco (schema.sql) e migrações
-└── .github/workflows/     # Deploy automático pro GitHub Pages
+└── supabase/              # Schema do banco (schema.sql) e migrações
 ```
 
 ## 🚀 Rodando localmente
@@ -89,7 +88,7 @@ O schema completo do banco (tabelas, permissões de segurança) está em [`supab
 ## 🔒 Segurança
 
 - Todas as tabelas do banco têm Row Level Security ativado — cada família só acessa os próprios dados, mesmo com a chave pública do projeto.
-- Nenhuma credencial fica no código: o deploy usa Secrets do GitHub Actions.
+- Nenhuma credencial fica no código: o deploy usa variáveis de ambiente da Vercel.
 - A leitura de extratos bancários acontece inteiramente no navegador da pessoa — o arquivo nunca é enviado a nenhum servidor.
 
 ---
