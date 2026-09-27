@@ -9,7 +9,11 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: var(--altura-bottomnav);
+    /* soma a área do indicador de início do iPhone (env(safe-area-inset-
+       bottom)) na ALTURA em vez de só descontar dela com padding — senão
+       esse espaço "come" da altura fixa da barra e espreme os ícones e
+       textos dos menus lá em cima, quase grudados na borda. */
+    height: calc(var(--altura-bottomnav) + env(safe-area-inset-bottom));
     background-color: var(--cor-superficie);
     border-top: 1px solid var(--cor-borda);
     z-index: 90;
