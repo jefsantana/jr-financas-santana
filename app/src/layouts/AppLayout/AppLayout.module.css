@@ -60,7 +60,10 @@
 
   .conteudo {
     padding: var(--espaco-md);
-    padding-bottom: calc(var(--altura-bottomnav) + var(--espaco-lg));
+    /* soma o safe-area-inset-bottom (barra de gestos/home indicator do
+       iPhone) — sem isso, a barra fixa fica um pouco mais alta que o
+       espaço reservado e cobre a última linha de conteúdo. */
+    padding-bottom: calc(var(--altura-bottomnav) + var(--espaco-lg) + env(safe-area-inset-bottom));
   }
 
   .fabDesktop {
