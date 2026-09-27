@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar.jsx';
 import { BottomNav } from '../BottomNav/BottomNav.jsx';
 import { Header } from '../Header/Header.jsx';
+import { ErrorBoundary } from '../../components/ErrorBoundary.jsx';
 import { MascoteAssistente } from '../../components/lancamentos/MascoteAssistente.jsx';
 import { AssistenteModal } from '../../components/lancamentos/AssistenteModal.jsx';
 import { NovoLancamentoModal } from '../../components/lancamentos/NovoLancamentoModal.jsx';
@@ -37,7 +38,9 @@ export function AppLayout() {
       <div className={`${styles.main} ${sidebarRecolhida ? styles.mainRecolhido : ''}`}>
         <Header titulo={titulo} aoAbrirMenu={() => setMenuMobileAberto(true)} />
         <main className={styles.conteudo}>
-          <Outlet />
+          <ErrorBoundary chaveReset={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
