@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, User, Camera, Mic, X } from 'lucide-react';
+import { Send, Camera, Mic, X } from 'lucide-react';
 import { MascoteAssistente } from './MascoteAssistente.jsx';
+import { Avatar } from '../ui/index.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import styles from './ChatAssistente.module.css';
@@ -27,6 +28,33 @@ function formatarDuracao(segundos) {
   const m = Math.floor(segundos / 60);
   const s = segundos % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// Emojis e as marcações estilo WhatsApp (*negrito*) que os cartões do bot
+// usam atrapalham a leitura em voz alta — a Web Speech API tenta "ler" cada
+// emoji e cada asterisco em vez de pular.
+function limparParaFala(texto) {
+  return texto
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/\*/g, '')
+    .replace(/\n+/g, '. ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Lê a resposta em voz alta usando a síntese de voz do próprio navegador —
+// sem custo e sem precisar mandar áudio pro/do servidor.
+function falarResposta(texto) {
+  if (!('speechSynthesis' in window)) return;
+  const limpo = limparParaFala(texto);
+  if (!limpo) return;
+
+  const utterance = new SpeechSynthesisUtterance(limpo);
+  utterance.lang = 'pt-BR';
+  const vozes = window.speechSynthesis.getVoices();
+  const vozPtBr = vozes.find((v) => v.lang === 'pt-BR') || vozes.find((v) => v.lang?.startsWith('pt'));
+  if (vozPtBr) utterance.voice = vozPtBr;
+  window.speechSynthesis.speak(utterance);
 }
 
 export function ChatAssistente({ aoAbrirManual }) {
@@ -76,7 +104,7 @@ export function ChatAssistente({ aoAbrirManual }) {
 
   // Núcleo comum: manda o payload pro /chat (texto, imagem ou áudio — o que
   // muda é só o corpo da requisição) e traduz a resposta em bolhas do bot.
-  async function enviarAoBot(corpo) {
+  async function enviarAoBot(corpo, { falar = false } = {}) {
     if (!BOT_API_URL) {
       toast.erro('Assistente não configurado: falta VITE_BOT_API_URL no ambiente do site.');
       return;
@@ -94,20 +122,22 @@ export function ChatAssistente({ aoAbrirManual }) {
       const dados = await resp.json();
 
       if (!resp.ok) {
-        setMensagens((atuais) => [
-          ...atuais,
-          { autor: 'bot', texto: dados.erro || 'Não consegui processar essa mensagem agora.' },
-        ]);
+        const erro = dados.erro || 'Não consegui processar essa mensagem agora.';
+        setMensagens((atuais) => [...atuais, { autor: 'bot', texto: erro }]);
+        if (falar) falarResposta(erro);
         return;
       }
 
       const respostas = dados.respostas?.length ? dados.respostas : ['🤔 Não tive uma resposta pra isso.'];
       setMensagens((atuais) => [...atuais, ...respostas.map((r) => ({ autor: 'bot', texto: r }))]);
+      if (falar) {
+        window.speechSynthesis?.cancel();
+        respostas.forEach(falarResposta);
+      }
     } catch {
-      setMensagens((atuais) => [
-        ...atuais,
-        { autor: 'bot', texto: 'Não consegui falar com o assistente agora. Verifique sua conexão e tente de novo.' },
-      ]);
+      const erro = 'Não consegui falar com o assistente agora. Verifique sua conexão e tente de novo.';
+      setMensagens((atuais) => [...atuais, { autor: 'bot', texto: erro }]);
+      if (falar) falarResposta(erro);
     } finally {
       setEnviando(false);
     }
@@ -164,7 +194,7 @@ export function ChatAssistente({ aoAbrirManual }) {
 
         setMensagens((atuais) => [...atuais, { autor: 'usuario', texto: '🎤 Áudio enviado' }]);
         const audioBase64 = await lerComoBase64(blob);
-        await enviarAoBot({ audioBase64, audioMimetype: blob.type });
+        await enviarAoBot({ audioBase64, audioMimetype: blob.type }, { falar: true });
       };
 
       gravadorRef.current = gravador;
@@ -212,7 +242,7 @@ export function ChatAssistente({ aoAbrirManual }) {
         {mensagens.map((m, indice) => (
           <div key={indice} className={`${styles.linha} ${m.autor === 'usuario' ? styles.linhaUsuario : ''}`}>
             <div className={styles.avatarBolha}>
-              {m.autor === 'usuario' ? <User size={16} /> : <MascoteAssistente size={26} />}
+              {m.autor === 'usuario' ? <Avatar nome={pessoa} tamanho="pequeno" /> : <MascoteAssistente size={26} />}
             </div>
             <div className={`${styles.bolha} ${m.autor === 'usuario' ? styles.bolhaUsuario : styles.bolhaBot}`}>
               {m.imagemUrl && <img src={m.imagemUrl} alt="Comprovante enviado" className={styles.imagemEnviada} />}
