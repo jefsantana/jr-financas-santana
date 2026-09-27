@@ -50,6 +50,7 @@
   /* Layout */
   --largura-sidebar: 268px;
   --altura-bottomnav: 68px;
+  --altura-header-mobile: 60px;
 
   /* Transições */
   --transicao-rapida: 0.15s ease;

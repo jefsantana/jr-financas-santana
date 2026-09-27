@@ -81,6 +81,17 @@
 @media (max-width: 640px) {
   .header {
     padding: var(--espaco-sm) var(--espaco-md);
+    /* No Safari do iPhone, quando o site é usado como atalho na tela
+       inicial (modo "standalone"), "position: sticky" some da tela
+       durante o gesto de rolagem e só reaparece quando o dedo solta —
+       um bug antigo e conhecido do WebKit nesse modo específico. A barra
+       de baixo e o menu lateral já usam "fixed" e nunca tiveram esse
+       problema, então trocamos aqui também só no mobile. */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--altura-header-mobile);
   }
 
   .botaoMenu {

@@ -65,6 +65,9 @@
        iPhone) — sem isso, a barra fixa fica um pouco mais alta que o
        espaço reservado e cobre a última linha de conteúdo. */
     padding-bottom: calc(var(--altura-bottomnav) + var(--espaco-lg) + env(safe-area-inset-bottom));
+    /* o cabeçalho virou "fixed" no mobile (saiu do fluxo normal), então
+       precisa desse espaço reservado em cima pra não ficar por baixo dele. */
+    padding-top: calc(var(--altura-header-mobile) + var(--espaco-md) + env(safe-area-inset-top));
   }
 
   .fabDesktop {
