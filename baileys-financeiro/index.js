@@ -2674,7 +2674,9 @@ const ORIGEM_APP_PERMITIDA = process.env.ORIGEM_APP_PERMITIDA || 'https://jefsan
 
 function iniciarServidorHttp() {
   const app = express();
-  app.use(express.json());
+  // Limite maior que o padrão (100kb): fotos de comprovante em base64 chegam
+  // bem mais pesadas que o normal de um JSON comum.
+  app.use(express.json({ limit: '15mb' }));
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', ORIGEM_APP_PERMITIDA);
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -2736,9 +2738,11 @@ function iniciarServidorHttp() {
       return res.status(403).json({ erro: 'Esta conta não pertence à família atendida por este assistente.' });
     }
 
-    const { mensagem, pessoa } = req.body;
+    const { mensagem, pessoa, imagemBase64, imagemMimetype, legenda, audioBase64, audioMimetype } = req.body;
     const textoMensagem = (mensagem || '').trim();
-    if (!textoMensagem) return res.status(400).json({ erro: "Campo 'mensagem' é obrigatório." });
+    if (!textoMensagem && !imagemBase64 && !audioBase64) {
+      return res.status(400).json({ erro: "Envie 'mensagem' (texto), 'imagemBase64' (comprovante) ou 'audioBase64' (áudio)." });
+    }
     if (!PESSOAS_VALIDAS.includes(pessoa)) {
       return res.status(400).json({ erro: `Campo 'pessoa' precisa ser um de: ${PESSOAS_VALIDAS.join(', ')}.` });
     }
@@ -2755,25 +2759,45 @@ function iniciarServidorHttp() {
 
     try {
       let dados;
-      const pendente = await buscarPendencia(chaveRemetente);
 
-      if (pendente) {
-        if (/^cancela(r)?$/i.test(textoMensagem)) {
-          await apagarPendencia(chaveRemetente);
-          registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
-          return res.json({ respostas: ['Certo, cancelado! 👍'] });
+      // Foto de comprovante: igual a mandar uma foto no grupo do WhatsApp —
+      // não entra no fluxo de "pendência" (uma pergunta em aberto é sempre
+      // continuada por texto, nunca por foto/áudio, mesma regra do WhatsApp).
+      if (imagemBase64) {
+        dados = await interpretarImagem(imagemBase64, imagemMimetype || 'image/jpeg', legenda || '', pessoa);
+        registrarHistorico(chaveRemetente, 'usuario', `[enviou uma foto de comprovante]${legenda ? ` legenda: ${legenda}` : ''}`);
+      } else if (audioBase64) {
+        if (!GROQ_API_KEY && !OPENAI_API_KEY) {
+          return res.status(503).json({ erro: 'Nenhum provedor de transcrição de áudio está configurado no bot.' });
         }
-        try {
-          dados = await continuarComResposta(pendente.dados, textoMensagem, pessoa, chaveRemetente);
-          registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
-          await apagarPendencia(chaveRemetente);
-        } catch (err) {
-          console.error('Erro ao continuar lançamento pendente (chat):', err.message);
-          return res.json({ respostas: ['🤔 Desculpe, não entendi bem sua resposta. Você poderia tentar novamente, com outras palavras, por favor?'] });
+        const buffer = Buffer.from(audioBase64, 'base64');
+        const textoTranscrito = await transcreverAudio(buffer, audioMimetype || 'audio/webm');
+        if (!textoTranscrito.trim()) {
+          return res.json({ respostas: ['🤔 Desculpe, não consegui entender o áudio. Você poderia falar novamente, por favor, ou mandar por texto?'] });
         }
+        dados = await interpretarMensagem(textoTranscrito, pessoa, null, chaveRemetente);
+        registrarHistorico(chaveRemetente, 'usuario', textoTranscrito);
       } else {
-        dados = await interpretarMensagem(textoMensagem, pessoa, null, chaveRemetente);
-        registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+        const pendente = await buscarPendencia(chaveRemetente);
+
+        if (pendente) {
+          if (/^cancela(r)?$/i.test(textoMensagem)) {
+            await apagarPendencia(chaveRemetente);
+            registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+            return res.json({ respostas: ['Certo, cancelado! 👍'] });
+          }
+          try {
+            dados = await continuarComResposta(pendente.dados, textoMensagem, pessoa, chaveRemetente);
+            registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+            await apagarPendencia(chaveRemetente);
+          } catch (err) {
+            console.error('Erro ao continuar lançamento pendente (chat):', err.message);
+            return res.json({ respostas: ['🤔 Desculpe, não entendi bem sua resposta. Você poderia tentar novamente, com outras palavras, por favor?'] });
+          }
+        } else {
+          dados = await interpretarMensagem(textoMensagem, pessoa, null, chaveRemetente);
+          registrarHistorico(chaveRemetente, 'usuario', textoMensagem);
+        }
       }
 
       const alvoCorrecao = await buscarAlvoCorrecao(null, chaveRemetente);
