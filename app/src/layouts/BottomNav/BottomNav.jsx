@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { IconeAssistente } from '../../components/lancamentos/IconeAssistente.jsx';
+import { MascoteAssistente } from '../../components/lancamentos/MascoteAssistente.jsx';
 import { NAV_ITEMS_MOBILE } from '../../utils/constantes.js';
 import { ICONES_NAV } from '../../utils/icones.js';
 import styles from './BottomNav.module.css';
@@ -20,7 +20,7 @@ export function BottomNav({ aoAbrirNovoLancamento }) {
           onClick={aoAbrirNovoLancamento}
           aria-label="Lançar com o assistente"
         >
-          <IconeAssistente />
+          <MascoteAssistente size={42} />
         </button>
       </div>
 

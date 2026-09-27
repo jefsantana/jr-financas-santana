@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar.jsx';
 import { BottomNav } from '../BottomNav/BottomNav.jsx';
 import { Header } from '../Header/Header.jsx';
-import { IconeAssistente } from '../../components/lancamentos/IconeAssistente.jsx';
+import { MascoteAssistente } from '../../components/lancamentos/MascoteAssistente.jsx';
 import { AssistenteModal } from '../../components/lancamentos/AssistenteModal.jsx';
 import { NovoLancamentoModal } from '../../components/lancamentos/NovoLancamentoModal.jsx';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
@@ -47,7 +47,7 @@ export function AppLayout() {
         onClick={() => setModalAssistenteAberto(true)}
         aria-label="Lançar com o assistente"
       >
-        <IconeAssistente />
+        <MascoteAssistente size={48} />
       </button>
 
       <BottomNav aoAbrirNovoLancamento={() => setModalAssistenteAberto(true)} />
