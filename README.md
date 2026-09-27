@@ -2,10 +2,11 @@
 
 Aplicativo web de controle financeiro para a família — lançamentos, cartões, parcelamentos, orçamentos, metas e relatórios, tudo num só lugar, com dados isolados e seguros por família.
 
-[![Deploy](https://github.com/jefsantana/sistema-financeiro-familiar/actions/workflows/deploy.yml/badge.svg)](https://github.com/jefsantana/sistema-financeiro-familiar/actions/workflows/deploy.yml)
-[![Site publicado](https://img.shields.io/badge/site-online-7B61FF)](https://jefsantana.github.io/sistema-financeiro-familiar/)
+[![Site publicado](https://img.shields.io/badge/site-online-7B61FF)](https://sistema-financeiro-familiar-zeta.vercel.app/)
 
-**🔗 Acesse: [jefsantana.github.io/sistema-financeiro-familiar](https://jefsantana.github.io/sistema-financeiro-familiar/)**
+**🔗 Acesse: [sistema-financeiro-familiar-zeta.vercel.app](https://sistema-financeiro-familiar-zeta.vercel.app/)**
+
+_Hospedado na Vercel (deploy automático a cada push na `main`)._
 
 ---
 

@@ -2721,7 +2721,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
 // O app React roda em outro domínio (GitHub Pages) e chama este servidor
 // direto do navegador pro endpoint /chat — sem essas respostas, o navegador
 // bloqueia a chamada antes mesmo dela sair (CORS).
-const ORIGEM_APP_PERMITIDA = process.env.ORIGEM_APP_PERMITIDA || 'https://jefsantana.github.io';
+const ORIGEM_APP_PERMITIDA = process.env.ORIGEM_APP_PERMITIDA || 'https://sistema-financeiro-familiar-zeta.vercel.app';
 
 function iniciarServidorHttp() {
   const app = express();
