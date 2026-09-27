@@ -12,8 +12,8 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'JR - Finanças',
-        short_name: 'JR - Finanças',
+        name: 'JR Finanças Santana',
+        short_name: 'JR Finanças Santana',
         description: 'Controle financeiro da família — lançamentos, cartões, parcelamentos, orçamentos, metas e relatórios.',
         lang: 'pt-BR',
         dir: 'ltr',
