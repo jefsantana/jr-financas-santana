@@ -814,19 +814,19 @@ async function salvarPagamentoContaFixa(dados) {
     throw new Error(`Conta fixa "${dados.descricao}" não encontrada entre as cadastradas.`);
   }
 
-  const vencimento = calcularProximoVencimento(alvo.dia_vencimento);
-  const mesAno = vencimento.toFormat('yyyy-MM');
-
-  const { data: existente, error: erroExistente } = await supabase
+  const { data: pagamentosExistentes, error: erroExistente } = await supabase
     .from('pagamentos_contas_fixas')
-    .select('id')
+    .select('mes_ano')
     .eq('familia_id', FAMILIA_ID)
-    .eq('conta_fixa_id', alvo.id)
-    .eq('mes_ano', mesAno)
-    .maybeSingle();
+    .eq('conta_fixa_id', alvo.id);
   if (erroExistente) throw new Error(`Supabase select (pagamentos_contas_fixas): ${erroExistente.message}`);
 
-  if (existente) {
+  const mesesJaPagos = (pagamentosExistentes || []).map((p) => p.mes_ano);
+  const { mesAno, vencimento } = mesAnoDoCicloEmAberto(alvo.dia_vencimento, mesesJaPagos);
+
+  if (mesesJaPagos.includes(mesAno)) {
+    // Só cai aqui no caso extremo de mês atual E seguinte já pagos (ver
+    // comentário de mesAnoDoCicloEmAberto) — reporta como "já pago".
     return { conta: alvo, vencimento, jaEstavaPago: true };
   }
 
@@ -1535,6 +1535,35 @@ function calcularProximoVencimento(diaVencimento, hoje = DateTime.now().setZone(
     if (vencimento >= hoje) return vencimento;
   }
   return null;
+}
+
+// Descobre qual CICLO (mês) de uma conta fixa ainda está em aberto — usado
+// só na hora de MARCAR como paga, nunca para "mostrar próximo vencimento"
+// (isso continua sendo calcularProximoVencimento). São coisas diferentes:
+// se o dia de vencimento (ex: dia 10) já passou este mês e a pessoa só foi
+// pagar hoje (dia 27), ela pagou a conta DESTE mês em atraso — não a do mês
+// que vem. calcularProximoVencimento sempre pula pro futuro (>= hoje), então
+// usá-la aqui registrava o pagamento no mês errado (o seguinte), deixando o
+// mês atual, que era o que realmente estava em aberto, esquecido como não
+// pago no Dashboard e nos avisos de vencimento.
+function mesAnoDoCicloEmAberto(diaVencimento, mesesJaPagos, hoje = DateTime.now().setZone(FUSO_HORARIO).startOf('day')) {
+  for (const deltaMes of [0, 1]) {
+    const inicioMes = hoje.plus({ months: deltaMes }).startOf('month');
+    const mesAno = inicioMes.toFormat('yyyy-MM');
+    if (!mesesJaPagos.includes(mesAno)) {
+      const ultimoDia = inicioMes.endOf('month').day;
+      const dia = Math.min(diaVencimento, ultimoDia);
+      return { mesAno, vencimento: inicioMes.set({ day: dia }) };
+    }
+  }
+  // Mês atual E o seguinte já pagos (ex: confirmando de novo por engano) —
+  // não há ciclo em aberto de verdade; trata como "já estava pago" no mês atual.
+  const inicioMesAtual = hoje.startOf('month');
+  const ultimoDia = inicioMesAtual.endOf('month').day;
+  return {
+    mesAno: inicioMesAtual.toFormat('yyyy-MM'),
+    vencimento: inicioMesAtual.set({ day: Math.min(diaVencimento, ultimoDia) }),
+  };
 }
 
 // ===================== Resumos (usados no agendado e sob demanda) =====================

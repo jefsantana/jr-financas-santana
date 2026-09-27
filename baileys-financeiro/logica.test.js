@@ -57,6 +57,20 @@ function calcularDiaVencimentoClampado(hoje, diaVencimento, deltaMes) {
   return inicioMes.set({ day: dia });
 }
 
+// Espelha mesAnoDoCicloEmAberto() do index.js — descobre em qual mês (atual
+// ou seguinte) uma conta fixa ainda está em aberto, na hora de MARCAR como
+// paga (diferente de "próximo vencimento a mostrar", que sempre olha pro
+// futuro). Guarda de regressão do bug: pagar uma conta em atraso (dia de
+// vencimento já passado este mês) registrava o pagamento no mês seguinte
+// em vez do mês atual, deixando o mês atual "esquecido" como não pago.
+function mesAnoDoCicloEmAberto(hoje, diaVencimento, mesesJaPagos) {
+  for (const deltaMes of [0, 1]) {
+    const mesAno = hoje.plus({ months: deltaMes }).startOf('month').toFormat('yyyy-MM');
+    if (!mesesJaPagos.includes(mesAno)) return mesAno;
+  }
+  return hoje.startOf('month').toFormat('yyyy-MM');
+}
+
 function ajusteSaldoAlimentacao(tipoMovimentoAntigo, valorAntigo, valorNovo) {
   const delta = Number(valorNovo) - Number(valorAntigo);
   return tipoMovimentoAntigo === 'gasto' ? -delta : delta;
@@ -151,6 +165,24 @@ test('calcularDiaVencimentoClampado: dia 31 em fevereiro (não bissexto) vira 28
   const hoje = DateTime.fromISO('2026-01-01');
   const venc = calcularDiaVencimentoClampado(hoje, 31, 1); // +1 mês = fevereiro/2026
   assert.equal(venc.toFormat('yyyy-MM-dd'), '2026-02-28');
+});
+
+test('mesAnoDoCicloEmAberto: vencimento já passou este mês e ainda não foi pago → marca o mês ATUAL (não o seguinte)', () => {
+  const hoje = DateTime.fromISO('2026-09-27'); // dia de vencimento (10) já passou
+  const mesAno = mesAnoDoCicloEmAberto(hoje, 10, []);
+  assert.equal(mesAno, '2026-09');
+});
+
+test('mesAnoDoCicloEmAberto: vencimento ainda não chegou este mês → também marca o mês atual', () => {
+  const hoje = DateTime.fromISO('2026-09-05');
+  const mesAno = mesAnoDoCicloEmAberto(hoje, 10, []);
+  assert.equal(mesAno, '2026-09');
+});
+
+test('mesAnoDoCicloEmAberto: mês atual já pago → marca o mês seguinte (pagando adiantado)', () => {
+  const hoje = DateTime.fromISO('2026-09-27');
+  const mesAno = mesAnoDoCicloEmAberto(hoje, 10, ['2026-09']);
+  assert.equal(mesAno, '2026-10');
 });
 
 test('ajusteSaldoAlimentacao: corrigir um GASTO pra cima desconta mais do saldo', () => {
