@@ -91,7 +91,11 @@
     top: 0;
     left: 0;
     right: 0;
-    height: var(--altura-header-mobile);
+    height: calc(var(--altura-header-mobile) + env(safe-area-inset-top));
+    /* soma a área da barra de status do iPhone (relógio/sinal) — sem
+       isso, o cabeçalho fixo (com o botão do menu) fica embaixo dela,
+       colado no topo físico da tela, meio "preso" e difícil de tocar. */
+    padding-top: calc(var(--espaco-sm) + env(safe-area-inset-top));
   }
 
   .botaoMenu {
