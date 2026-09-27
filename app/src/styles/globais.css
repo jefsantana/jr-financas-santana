@@ -16,6 +16,11 @@ body {
   font-family: var(--fonte-corpo);
   transition: background-color var(--transicao), color var(--transicao);
   min-height: 100vh;
+  /* 100dvh acompanha a barra de endereço do navegador mobile (some ao
+     rolar) — sem isso, a página conta com uma altura "cheia" que nunca é
+     a área visível de verdade, e isso é o que fazia conteúdo aparecer
+     por baixo da barra de menu fixa durante a rolagem. */
+  min-height: 100dvh;
 }
 
 ul,
@@ -61,6 +66,7 @@ svg {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   /* Fica aqui em vez de no <body> — em alguns navegadores mobile (Safari
      iOS principalmente), "overflow-x: hidden" no próprio body faz ele virar
      um contêiner de rolagem, e isso quebra o comportamento de elementos

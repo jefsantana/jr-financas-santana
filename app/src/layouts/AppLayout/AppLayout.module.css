@@ -2,6 +2,7 @@
   margin-left: var(--largura-sidebar);
   width: calc(100% - var(--largura-sidebar));
   min-height: 100vh;
+  min-height: 100dvh;
   transition: margin-left var(--transicao), width var(--transicao);
 }
 
