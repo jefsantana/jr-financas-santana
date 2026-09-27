@@ -23,6 +23,13 @@
   margin-top: 2px;
 }
 
+.cabecalhoPessoa {
+  font-size: 0.76rem;
+  color: var(--cor-primaria);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
 .seletorPessoa {
   display: flex;
   align-items: center;

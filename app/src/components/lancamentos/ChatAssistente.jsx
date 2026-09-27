@@ -30,10 +30,20 @@ function formatarDuracao(segundos) {
 }
 
 export function ChatAssistente({ aoAbrirManual }) {
-  const { sessao, pessoas } = useAuth();
+  const { sessao, perfil, pessoas } = useAuth();
   const toast = useToast();
 
-  const [pessoa, setPessoa] = useState(pessoas[0] || '');
+  // Detecta automaticamente quem está lançando pelo próprio login, em vez de
+  // perguntar toda vez: cada pessoa da família tem a própria conta separada,
+  // e o nome cadastrado nela (perfil.nome) já é o mesmo nome usado nos
+  // lançamentos (familia.pessoa_1/pessoa_2) — então basta casar um com o
+  // outro. Só cai no seletor manual se não achar uma correspondência clara
+  // (ex: os nomes foram cadastrados de forma diferente).
+  const pessoaDetectada = pessoas.find(
+    (p) => p.trim().toLowerCase() === (perfil?.nome || '').trim().toLowerCase()
+  );
+  const [pessoaManual, setPessoaManual] = useState(null);
+  const pessoa = pessoaManual || pessoaDetectada || pessoas[0] || '';
   const [mensagens, setMensagens] = useState([MENSAGEM_BOAS_VINDAS]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -178,18 +188,19 @@ export function ChatAssistente({ aoAbrirManual }) {
         <div>
           <p className={styles.cabecalhoTitulo}>Assistente financeiro</p>
           <p className={styles.cabecalhoSubtitulo}>Descreva, fotografe ou fale o lançamento — eu registro pra você.</p>
+          {pessoaDetectada && <p className={styles.cabecalhoPessoa}>Lançando como {pessoaDetectada}</p>}
         </div>
       </div>
 
-      {pessoas.length > 1 && (
+      {pessoas.length > 1 && !pessoaDetectada && (
         <div className={styles.seletorPessoa} role="group" aria-label="Enviando como">
-          <span className={styles.seletorRotulo}>Enviando como:</span>
+          <span className={styles.seletorRotulo}>Não identifiquei automaticamente — enviando como:</span>
           {pessoas.map((p) => (
             <button
               key={p}
               type="button"
               className={`${styles.opcaoPessoa} ${pessoa === p ? styles.opcaoPessoaAtiva : ''}`}
-              onClick={() => setPessoa(p)}
+              onClick={() => setPessoaManual(p)}
             >
               {p}
             </button>
