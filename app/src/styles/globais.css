@@ -16,7 +16,6 @@ body {
   font-family: var(--fonte-corpo);
   transition: background-color var(--transicao), color var(--transicao);
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 ul,
@@ -62,6 +61,12 @@ svg {
 
 #root {
   min-height: 100vh;
+  /* Fica aqui em vez de no <body> — em alguns navegadores mobile (Safari
+     iOS principalmente), "overflow-x: hidden" no próprio body faz ele virar
+     um contêiner de rolagem, e isso quebra o comportamento de elementos
+     "position: fixed" (como a barra de menu debaixo), que passam a rolar
+     junto com a página em vez de ficar grudados na tela. */
+  overflow-x: hidden;
 }
 
 .valor-positivo,
