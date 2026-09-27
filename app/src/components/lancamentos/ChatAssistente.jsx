@@ -186,7 +186,7 @@ export function ChatAssistente({ aoAbrirManual }) {
       <div className={styles.cabecalho}>
         <MascoteAssistente size={56} />
         <div>
-          <p className={styles.cabecalhoTitulo}>Assistente financeiro</p>
+          <p className={styles.cabecalhoTitulo}>Assistente Santana</p>
           <p className={styles.cabecalhoSubtitulo}>Descreva, fotografe ou fale o lançamento — eu registro pra você.</p>
           {pessoaDetectada && <p className={styles.cabecalhoPessoa}>Lançando como {pessoaDetectada}</p>}
         </div>
