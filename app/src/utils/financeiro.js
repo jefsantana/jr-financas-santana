@@ -151,7 +151,11 @@ export function mesFaturaDeCompra(dataCompraIso, diaFechamento) {
  */
 export function vencimentoDaFatura(mesFatura, diaVencimento) {
   const [ano, mes] = mesFatura.split('-').map(Number);
-  const dia = Math.min(diaVencimento || 10, 28);
+  // `mes` é 1-based, então como índice de Date ele já aponta para o mês seguinte
+  // (vencimento sempre no mês após o fechamento). O último dia desse mês limita
+  // o dia de vencimento (ex: dia 31 em fevereiro vira 28), igual ao resto do app.
+  const ultimoDiaDoMes = new Date(ano, mes + 1, 0).getDate();
+  const dia = Math.min(diaVencimento || 10, ultimoDiaDoMes);
   return new Date(ano, mes, dia);
 }
 
