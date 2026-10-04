@@ -3,8 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar.jsx';
 import { Header } from '../Header/Header.jsx';
 import { ErrorBoundary } from '../../components/ErrorBoundary.jsx';
-import { Avatar3D } from '../../components/lancamentos/Avatar3D.jsx';
-import { useAuth } from '../../contexts/AuthContext.jsx';
+import { MascoteAssistente } from '../../components/lancamentos/MascoteAssistente.jsx';
 import { AssistenteModal } from '../../components/lancamentos/AssistenteModal.jsx';
 import { NovoLancamentoModal } from '../../components/lancamentos/NovoLancamentoModal.jsx';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
@@ -12,8 +11,6 @@ import { NAV_ITEMS } from '../../utils/constantes.js';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
-  const { perfil } = useAuth();
-  const pessoaFab = (perfil?.nome || '').trim().toLowerCase().startsWith('raquel') ? 'raquel' : 'jeferson';
   const location = useLocation();
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [sidebarRecolhida, setSidebarRecolhida] = useLocalStorage('sidebarRecolhida', false);
@@ -52,7 +49,7 @@ export function AppLayout() {
         onClick={() => setModalAssistenteAberto(true)}
         aria-label="Lançar com o assistente"
       >
-        <Avatar3D pessoa={pessoaFab} size={60} acenando />
+        <MascoteAssistente size={60} />
       </button>
 
       <AssistenteModal
