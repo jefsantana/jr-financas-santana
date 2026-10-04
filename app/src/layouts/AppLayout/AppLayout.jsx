@@ -49,7 +49,7 @@ export function AppLayout() {
         onClick={() => setModalAssistenteAberto(true)}
         aria-label="Lançar com o assistente"
       >
-        <MascoteAssistente size={52} className={styles.mascoteAcenando} />
+        <MascoteAssistente size={52} acenando />
       </button>
 
       <AssistenteModal

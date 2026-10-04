@@ -1,0 +1,43 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.imagem {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.braco {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* O braço gira em torno do ombro (parte de baixo da barra do braço), subindo e
+   descendo como num aceno. transform-box: view-box usa as coordenadas do SVG. */
+.bracoGrupo {
+  transform-box: view-box;
+  transform-origin: 390px 420px;
+  animation: acenar 1.8s ease-in-out infinite;
+}
+
+@keyframes acenar {
+  0%, 100% { transform: rotate(10deg); }
+  25% { transform: rotate(42deg); }
+  50% { transform: rotate(10deg); }
+  75% { transform: rotate(42deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bracoGrupo {
+    animation: none;
+    transform: rotate(10deg);
+  }
+}
