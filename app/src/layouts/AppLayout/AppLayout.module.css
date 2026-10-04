@@ -26,17 +26,18 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background-color: var(--cor-primaria);
-  color: #FFFFFF;
+  /* sem fundo nem sombra: só o robô aparece */
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--sombra-lg);
   z-index: 40;
-  transition: transform var(--transicao-rapida), background-color var(--transicao);
+  transition: transform var(--transicao-rapida);
 }
 
 .fabDesktop:hover {
-  background-color: var(--cor-primaria-hover);
   transform: translateY(-2px);
 }
 
