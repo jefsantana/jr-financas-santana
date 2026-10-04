@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import lottie from 'lottie-web';
 import animacaoAssistente from '../../assets/assistente-lottie.json';
-import styles from './MascoteAssistente.module.css';
 
 // Avatar do assistente: robô animado (Lottie) acenando em loop.
 // Usado no botão flutuante e no chat.
@@ -23,7 +22,7 @@ export function MascoteAssistente({ size = 96, className }) {
   return (
     <div
       ref={containerRef}
-      className={`${styles.wrapper} ${className || ''}`}
+      className={className}
       role="img"
       aria-label="Assistente Santana"
       style={{ width: size, height: size, flexShrink: 0 }}
