@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Mail, Lock, User, Heart } from 'lucide-react';
+import { Mail, Lock, User } from 'lucide-react';
 import { Input, Button } from '../../components/ui/index.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import styles from './Login.module.css';
+import logoJr from '../../assets/logo-jr.svg';
 
 function mensagemDeErroEntrar(erro) {
   if (!erro) return '';
@@ -85,9 +86,7 @@ export default function Login() {
     <div className={styles.pagina}>
       <div className={styles.cartao}>
         <div className={styles.logo}>
-          <div className={styles.logoIcone}>
-            <Heart size={16} fill="currentColor" />
-          </div>
+          <img src={logoJr} alt="" className={styles.logoIcone} />
           <div className={styles.logoTextos}>
             <h1>Controle Financeiro</h1>
             <p className={styles.logoSubtitulo}>Familiar ou pessoal</p>

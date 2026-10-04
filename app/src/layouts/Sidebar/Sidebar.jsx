@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { PanelLeftClose, LogOut, Heart } from 'lucide-react';
+import { PanelLeftClose, LogOut } from 'lucide-react';
 import { NAV_ITEMS } from '../../utils/constantes.js';
 import { ICONES_NAV } from '../../utils/icones.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { Avatar } from '../../components/ui/index.js';
 import { nomeExibicao } from '../../utils/formatadores.js';
 import styles from './Sidebar.module.css';
+import logoJr from '../../assets/logo-jr.svg';
 
 const GRUPOS_NAV = [...new Set(NAV_ITEMS.map((item) => item.grupo))].map((grupo) => ({
   grupo,
@@ -25,9 +26,7 @@ export function Sidebar({ aberta, recolhida, aoFechar, aoAlternarRecolhida }) {
         aria-label="Menu principal"
       >
         <div className={styles.logo}>
-          <div className={styles.logoIcone}>
-            <Heart size={16} fill="currentColor" />
-          </div>
+          <img src={logoJr} alt="" className={styles.logoIcone} />
           <div className={styles.logoTextos}>
             <h1>{familia?.nome || 'Minha família'}</h1>
             <p className={styles.logoSubtitulo}>{pessoas.length > 1 ? 'Finanças em dupla' : 'Finanças pessoais'}</p>

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Heart } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { Input, Button } from '../../components/ui/index.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import styles from '../Login/Login.module.css';
+import logoJr from '../../assets/logo-jr.svg';
 
 function mensagemDeErro(erro) {
   if (!erro) return '';
@@ -38,9 +39,7 @@ export default function RedefinirSenha() {
     <div className={styles.pagina}>
       <div className={styles.cartao}>
         <div className={styles.logo}>
-          <div className={styles.logoIcone}>
-            <Heart size={16} fill="currentColor" />
-          </div>
+          <img src={logoJr} alt="" className={styles.logoIcone} />
           <div className={styles.logoTextos}>
             <h1>Nova senha</h1>
             <p className={styles.logoSubtitulo}>Escolha uma senha nova pra sua conta</p>
