@@ -1,0 +1,22 @@
+.svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* O braço gira no ombro, de um lado para o outro, como um aceno. */
+.braco {
+  transform-box: view-box;
+  transform-origin: 147px 170px;
+  animation: acenar 1.6s ease-in-out infinite;
+}
+
+@keyframes acenar {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(22deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .braco {
+    animation: none;
+  }
+}

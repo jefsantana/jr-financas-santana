@@ -1,23 +1,10 @@
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import avatarRaquel from '../../assets/avatar-raquel.png';
-import avatarJeferson from '../../assets/avatar-jeferson.png';
-import styles from './MascoteAssistente.module.css';
+import { AvatarPessoa } from './AvatarPessoa.jsx';
 
-// Avatar do assistente. Cada pessoa vê o seu, escolhido pelo nome do perfil logado.
-// Com "acenando", o avatar balança de leve, como um tchau.
+// Avatar do assistente: Raquel vê a personagem feminina e Jeferson vê a masculina,
+// escolhidas pelo nome do perfil logado. "acenando" faz o braço balançar.
 export function MascoteAssistente({ size = 96, className, acenando = false }) {
   const { perfil } = useAuth();
-  const ehRaquel = (perfil?.nome || '').trim().toLowerCase().startsWith('raquel');
-  const src = ehRaquel ? avatarRaquel : avatarJeferson;
-
-  return (
-    <img
-      src={src}
-      alt="Assistente Santana"
-      width={size}
-      height={size}
-      className={`${styles.imagem} ${acenando ? styles.acenando : ''} ${className || ''}`}
-      style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }}
-    />
-  );
+  const pessoa = (perfil?.nome || '').trim().toLowerCase().startsWith('raquel') ? 'raquel' : 'jeferson';
+  return <AvatarPessoa pessoa={pessoa} size={size} acenando={acenando} className={className} />;
 }
