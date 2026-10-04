@@ -70,7 +70,21 @@
     padding-top: calc(var(--altura-header-mobile) + var(--espaco-md) + env(safe-area-inset-top));
   }
 
+  /* No celular o botão do assistente é o único atalho fora do menu: fica no
+     canto inferior direito, acima da área de gestos do iPhone. */
   .fabDesktop {
-    display: none;
+    bottom: calc(var(--espaco-lg) + env(safe-area-inset-bottom));
+    right: var(--espaco-md);
+    width: 60px;
+    height: 60px;
+  }
+
+  .fabDesktop svg {
+    width: 56px;
+    height: 56px;
+  }
+
+  .conteudo {
+    padding-bottom: calc(var(--espaco-xl) * 2 + 60px + env(safe-area-inset-bottom));
   }
 }
