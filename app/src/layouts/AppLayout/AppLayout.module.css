@@ -39,8 +39,8 @@
 
 /* robô do botão em tamanho maior no navegador */
 .fabDesktop > div {
-  width: 84px !important;
-  height: 84px !important;
+  width: 100px !important;
+  height: 100px !important;
 }
 
 .fabDesktop:hover {
@@ -48,8 +48,8 @@
 }
 
 .fabDesktop {
-  width: 88px;
-  height: 88px;
+  width: 104px;
+  height: 104px;
 }
 
 /* Aceno: o corpo do mascote balança a partir da base, em ciclos com pausa,
