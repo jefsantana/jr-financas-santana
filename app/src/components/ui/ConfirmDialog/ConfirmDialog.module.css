@@ -15,6 +15,7 @@
   font-size: 0.92rem;
   line-height: 1.5;
   margin-bottom: var(--espaco-lg);
+  text-align: center;
 }
 
 .conteudoExtra {
@@ -24,7 +25,7 @@
 .acoes {
   display: flex;
   gap: var(--espaco-sm);
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 @media (max-width: 640px) {

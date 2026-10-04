@@ -29,7 +29,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo={titulo}>
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo={titulo} centralizado>
       {variantePerigo && (
         <div className={styles.icone}>
           <AlertTriangle size={22} />

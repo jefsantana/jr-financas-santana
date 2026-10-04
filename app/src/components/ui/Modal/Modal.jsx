@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import styles from './Modal.module.css';
 
-export function Modal({ aberto, aoFechar, titulo, children }) {
+export function Modal({ aberto, aoFechar, titulo, centralizado = false, children }) {
   useEffect(() => {
     if (!aberto) return;
     const aoTeclar = (evento) => {
@@ -22,7 +22,7 @@ export function Modal({ aberto, aoFechar, titulo, children }) {
   return createPortal(
     <div className={styles.sobreposicao} onClick={aoFechar}>
       <div
-        className={styles.modal}
+        className={`${styles.modal} ${centralizado ? styles.centralizado : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}

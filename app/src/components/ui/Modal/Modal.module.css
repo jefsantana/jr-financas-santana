@@ -72,6 +72,23 @@
   padding: var(--espaco-lg);
 }
 
+/* Título centralizado, com o botão fechar no canto. Usado por diálogos
+   de confirmação e pelo assistente, pra ficarem alinhados ao centro. */
+.centralizado .cabecalho {
+  justify-content: center;
+  position: relative;
+}
+
+.centralizado .titulo {
+  text-align: center;
+}
+
+.centralizado .botaoFechar {
+  position: absolute;
+  top: var(--espaco-lg);
+  right: var(--espaco-lg);
+}
+
 @media (max-width: 640px) {
   .sobreposicao {
     align-items: flex-end;

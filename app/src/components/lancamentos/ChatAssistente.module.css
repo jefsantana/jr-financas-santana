@@ -7,8 +7,10 @@
 
 .cabecalho {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--espaco-md);
+  gap: var(--espaco-sm);
+  text-align: center;
 }
 
 .cabecalhoTitulo {
