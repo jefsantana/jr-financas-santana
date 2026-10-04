@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar.jsx';
 import { Header } from '../Header/Header.jsx';
 import { ErrorBoundary } from '../../components/ErrorBoundary.jsx';
-import { MascoteAnimado } from '../../components/lancamentos/MascoteAnimado.jsx';
+import { MascoteAssistente } from '../../components/lancamentos/MascoteAssistente.jsx';
 import { AssistenteModal } from '../../components/lancamentos/AssistenteModal.jsx';
 import { NovoLancamentoModal } from '../../components/lancamentos/NovoLancamentoModal.jsx';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
@@ -49,7 +49,7 @@ export function AppLayout() {
         onClick={() => setModalAssistenteAberto(true)}
         aria-label="Lançar com o assistente"
       >
-        <MascoteAnimado size={48} />
+        <MascoteAssistente size={52} className={styles.mascoteAcenando} />
       </button>
 
       <AssistenteModal

@@ -45,9 +45,26 @@
   height: 60px;
 }
 
-.fabDesktop svg {
-  width: 52px;
-  height: 52px;
+/* Aceno: o corpo do mascote balança a partir da base, em ciclos com pausa,
+   pra dar a sensação de "tchau". */
+.mascoteAcenando {
+  transform-origin: 50% 90%;
+  animation: acenar 2.8s ease-in-out infinite;
+}
+
+@keyframes acenar {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  66% { transform: rotate(-12deg); }
+  72% { transform: rotate(10deg); }
+  78% { transform: rotate(-8deg); }
+  84% { transform: rotate(6deg); }
+  90% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascoteAcenando {
+    animation: none;
+  }
 }
 
 @media (max-width: 1024px) {
