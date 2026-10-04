@@ -1,18 +1,11 @@
-import { NavLink } from 'react-router-dom';
 import { MascoteAssistente } from '../../components/lancamentos/MascoteAssistente.jsx';
-import { NAV_ITEMS_MOBILE } from '../../utils/constantes.js';
-import { ICONES_NAV } from '../../utils/icones.js';
 import styles from './BottomNav.module.css';
 
+// Barra inferior do celular: só o assistente, centralizado. Os demais menus
+// ficam no menu lateral (botão hambúrguer), que já tem todas as seções.
 export function BottomNav({ aoAbrirNovoLancamento }) {
-  const [esquerda, direita] = [NAV_ITEMS_MOBILE.slice(0, 2), NAV_ITEMS_MOBILE.slice(2)];
-
   return (
-    <nav className={styles.nav} aria-label="Navegação principal">
-      {esquerda.map((item) => (
-        <ItemNav key={item.path} item={item} />
-      ))}
-
+    <nav className={styles.nav} aria-label="Assistente">
       <div className={styles.botaoCentral}>
         <button
           type="button"
@@ -23,20 +16,6 @@ export function BottomNav({ aoAbrirNovoLancamento }) {
           <MascoteAssistente size={42} />
         </button>
       </div>
-
-      {direita.map((item) => (
-        <ItemNav key={item.path} item={item} />
-      ))}
     </nav>
-  );
-}
-
-function ItemNav({ item }) {
-  const Icone = ICONES_NAV[item.icon];
-  return (
-    <NavLink to={item.path} className={({ isActive }) => `${styles.item} ${isActive ? styles.itemAtivo : ''}`}>
-      <Icone />
-      <span>{item.label}</span>
-    </NavLink>
   );
 }
