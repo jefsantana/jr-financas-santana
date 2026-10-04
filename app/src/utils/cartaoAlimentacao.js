@@ -1,4 +1,4 @@
-import { criar, atualizar, excluir } from '../services/dados.js';
+import { criar, atualizar, excluir, excluirPermanente } from '../services/dados.js';
 import { dataLocalDeHoje } from './formatadores.js';
 
 /**
@@ -18,27 +18,37 @@ export async function registrarMovimentoAlimentacao({
 }) {
   const nome = nomeCartao.trim();
   let cartao = cartoesExistentes.find((c) => c.nome.toLowerCase() === nome.toLowerCase());
+  const cartaoCriadoAgora = !cartao;
 
-  if (!cartao) {
+  if (cartaoCriadoAgora) {
     cartao = await criar('CartoesAlimentacao', { nome, saldoAtual: 0 }, familiaId);
   }
 
   const novoSaldo = tipo === 'recarga' ? Number(cartao.saldoAtual) + Number(valor) : Number(cartao.saldoAtual) - Number(valor);
 
-  await atualizar('CartoesAlimentacao', cartao.id, { saldoAtual: novoSaldo });
-
-  const movimento = await criar(
-    'MovimentosCartaoAlimentacao',
-    {
-      cartaoAlimentacaoId: cartao.id,
-      tipo,
-      descricao: descricao || (tipo === 'recarga' ? 'Recarga do cartão alimentação' : 'Gasto no cartão alimentação'),
-      valor,
-      pessoa: pessoa || null,
-      data: dataLocalDeHoje(),
-    },
-    familiaId
-  );
+  // Movimento primeiro e saldo depois: se a gravação do movimento falhar, o saldo
+  // nem chega a mudar. Se a atualização do saldo falhar, o movimento é removido.
+  // Assim o saldo nunca fica alterado sem o movimento que o explica.
+  let movimento = null;
+  try {
+    movimento = await criar(
+      'MovimentosCartaoAlimentacao',
+      {
+        cartaoAlimentacaoId: cartao.id,
+        tipo,
+        descricao: descricao || (tipo === 'recarga' ? 'Recarga do cartão alimentação' : 'Gasto no cartão alimentação'),
+        valor,
+        pessoa: pessoa || null,
+        data: dataLocalDeHoje(),
+      },
+      familiaId
+    );
+    await atualizar('CartoesAlimentacao', cartao.id, { saldoAtual: novoSaldo });
+  } catch (erro) {
+    if (movimento) await excluirPermanente('MovimentosCartaoAlimentacao', movimento.id);
+    if (cartaoCriadoAgora) await excluirPermanente('CartoesAlimentacao', cartao.id);
+    throw erro;
+  }
 
   return { movimento, cartao: { ...cartao, saldoAtual: novoSaldo } };
 }
