@@ -10,6 +10,12 @@ const qrcode = require('qrcode-terminal');
 const { createClient } = require('@supabase/supabase-js');
 const { DateTime } = require('luxon');
 const cron = require('node-cron');
+const {
+  extrairDataDaMensagem,
+  aplicarDataDaMensagem,
+  decidirCartaoAlimentacao,
+  itensDoLancamento,
+} = require('./interpretacao.js');
 
 // ===================== CONFIGURAÇÃO =====================
 const NOME_GRUPO_ALVO = process.env.NOME_GRUPO_ALVO || 'CONTROLE FINANCEIRO';
@@ -193,13 +199,17 @@ O sistema deles tem estes tipos de lançamento possíveis:
 16. "correcao" — quando a pessoa está corrigindo um lançamento que JÁ foi registrado antes (ex: "corrige, era 45 não 50", "errei a categoria, é Saúde", "não foi no Nubank, foi no Inter", "o valor certo é 120"). Você pode receber um aviso no contexto dizendo que essa mensagem é uma resposta direta a uma confirmação anterior — nesse caso é quase certo que seja uma correção daquele lançamento específico. Preencha APENAS o campo que está sendo corrigido, usando o MESMO nome de campo das outras categorias (descricao, valor, categoria, pessoa, dia_vencimento, cartao, numero_parcelas, valor_total, valor_alvo, limite_mensal, limite ou dia_fechamento) — deixe todos os outros null, MESMO que a mensagem mencione outras coisas de passagem (ex: "neste cartão, adiciona o limite de 200, no Nubank" — se o lançamento já é o cartão Nubank, "Nubank" ali é só contexto pra identificar do que se trata, NÃO é uma correção do nome do cartão; preencha só "limite": 200, deixe "cartao" null). Se não ficar claro qual valor é o correto (ex: "45 não 50" pode gerar dúvida), assuma que o ÚLTIMO número mencionado, ou o que vier depois de "é"/"na verdade é"/"o certo é", é o valor correto.
 17. "exclusao" — quando a pessoa pede pra APAGAR/EXCLUIR/CANCELAR/REMOVER um lançamento que JÁ foi registrado por completo (diferente de "correcao", que só AJUSTA um campo errado — "exclusao" remove o lançamento inteiro). Ex: "apaga esse gasto", "cancela esse lançamento, foi engano", "exclui a meta de viagem", "remove esse cartão", "não era pra ter lançado isso, apaga". Igual à correção, geralmente vem como reply a uma confirmação anterior, ou se refere ao lançamento mais recente da pessoa. Não precisa de nenhum campo — todos os campos de dados ficam null, só o "tipo" e "ehTransacao": true importam.
 
-A data de gasto/entrada/compra_cartao/gasto_alimentacao é preenchida automaticamente pelo sistema com a data de hoje — nunca pergunte por ela nem tente adivinhá-la.
+A data de gasto/entrada/compra_cartao/gasto_alimentacao é preenchida automaticamente pelo sistema — nunca pergunte por ela nem tente adivinhá-la. O sistema já entende expressões como "ontem", "anteontem" e "dia 5 do mês passado" a partir do texto, então não precisa calcular datas.
+
+VÁRIOS LANÇAMENTOS NA MESMA MENSAGEM (ex: "gastei 25 no posto e 15 no estacionamento", ou "recebi 500 de freela e paguei 30 de uber"): cada lançamento vira um item do array "itens", com o mesmo formato e as mesmas regras de cada tipo (inclusive a forma de pagamento). Nesse caso, deixe os campos de topo null, exceto ehTransacao. Se a mensagem tiver um único lançamento, não use "itens" — preencha os campos de topo normalmente.
 
 REGRA DE FORMA DE PAGAMENTO (importante — causa comum de erro): "gasto" (tipo 1), "compra_cartao" (tipo 4) e "gasto_alimentacao" (tipo 8) são a MESMA coisa na prática — uma despesa — o que muda é de ONDE saiu o dinheiro, e isso afeta saldos diferentes (saldo da conta, fatura do cartão, ou saldo do vale-alimentação). NUNCA assuma "gasto" (conta) só porque a mensagem não deu nenhuma pista de forma de pagamento — isso já causou lançamento no saldo errado no passado. Só decida entre esses três tipos quando a forma de pagamento estiver CLARA na mensagem:
 - Cartão de crédito citado (nome ou "no crédito"/"no cartão") → "compra_cartao".
 - Vale-alimentação citado (nome de cartão alimentação cadastrado, ou "Ticket"/"VR"/"Alelo"/"Sodexo"/"vale-alimentação") → "gasto_alimentacao".
 - "no pix", "no débito", "em dinheiro", "saiu da conta", "no boleto", ou qualquer outra forma que não seja cartão de crédito nem vale-alimentação → "gasto".
 Se a mensagem disser só algo como "gastei 10 no mercado" ou "paguei 50 de gasolina", SEM nenhuma dessas pistas, NÃO decida sozinho: deixe "tipo" como null, "faltando": ["forma_pagamento"], e "pergunta" perguntando a forma de pagamento — cite os cartões e cartões alimentação já cadastrados (do contexto) como opções, se houver, pra facilitar a resposta (ex: "Foi no cartão de crédito, no vale-alimentação (Ticket) ou saiu direto da conta?"). SÓ "forma_pagamento" fica faltando nesse caso — preencha "descricao", "valor", "categoria" e "pessoa" normalmente com o que já dá pra saber pela mensagem (ex: "mercado" → descricao "Mercado"), porque quando a pessoa responder só a forma de pagamento (ex: "pix"), essa resposta não vai repetir o resto do lançamento, e o que ficar null agora fica perdido — o bot voltaria a pedir a descrição de novo em vez de fechar o lançamento. Assim que a pessoa responder, classifique definitivamente no tipo certo com os campos daquele tipo (ex: respondeu "cartão" → vire compra_cartao e, se não citou qual, pergunte qual cartão cadastrado; respondeu "ticket"/"vale" → vire gasto_alimentacao; respondeu "conta"/"pix"/"dinheiro" → vire gasto).
+
+REGRA DO CARTÃO ALIMENTAÇÃO (importante — erro já observado): use o nome do cartão EXATAMENTE como a pessoa escreveu na mensagem. Ex: "recarga de 200 no VR" → cartao "VR" (mesmo que só exista o Ticket cadastrado). NUNCA troque um nome por outro cartão cadastrado só porque os dois são de vale-alimentação. Só use o nome de um cartão já cadastrado se a pessoa citou esse nome ou usou um termo genérico ("vale", "vale-alimentação", "refeição") e há um único cartão cadastrado. Se não houver nome nenhum, deixe cartao null.
 
 Você também pode receber, antes da mensagem, um bloco de contexto informando quais cartões (de crédito e alimentação) já estão cadastrados no sistema — use isso pra reconhecer o cartão certo mesmo com pequenas variações de escrita, ou pra perguntar entre as opções reais quando não for citado.
 
@@ -246,7 +256,8 @@ Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, no format
   "comentario": "reação curta, cordial e bem-humorada (máx 10 palavras, 1-2 emojis) — só preencha se o lançamento estiver completo (não usar em consulta_saldo)",
   "faltando": ["nomes dos campos que ainda faltam"] (array vazio se completo),
   "pergunta": "pergunta curta, cordial e educada em português pedindo exatamente o que falta (ex: \"Você poderia me dizer o valor, por favor?\")" ou null (se não faltar nada),
-  "respostaCasual": "resposta curta, cordial e educada em português" (só quando ehTransacao for false) ou null
+  "respostaCasual": "resposta curta, cordial e educada em português" (só quando ehTransacao for false) ou null,
+  "itens": [ objetos completos no mesmo formato acima, um por lançamento ] (só quando a mensagem tiver mais de um lançamento) ou null
 }
 
 Mensagens do tipo consulta_saldo, consulta_uso_ia, consulta_limite_provedores, consulta_contas_fixas, pagamento_conta_fixa, cadastro_cartao, correcao e exclusao também devem ter ehTransacao: true (são pedidos válidos pro bot, mesmo sem registrar um lançamento novo).
@@ -651,7 +662,34 @@ async function interpretarMensagem(texto, remetente, contextoExtra = null, chave
   const historico = chaveRemetente ? await formatarHistorico(chaveRemetente) : null;
   if (historico) blocos.push({ type: 'text', text: historico });
   blocos.push({ type: 'text', text: `Mensagem de texto do WhatsApp (remetente: ${remetente}):\n"${texto}"` });
-  return chamarIA(blocos);
+  return prepararDados(await chamarIA(blocos), texto);
+}
+
+// Aplica as regras determinísticas em cima do que a IA devolveu: data (só a
+// que a mensagem escreve de fato), texto original (usado pra checar o cartão)
+// e a lista de itens quando a mensagem tem mais de um lançamento.
+function prepararDados(dados, texto, dadosAnteriores = null) {
+  if (!dados) return dados;
+  const hoje = DateTime.now().setZone(FUSO_HORARIO).startOf('day');
+  const dataAnterior = dadosAnteriores?.data || null;
+  dados.textoOriginal = texto;
+
+  const itens = itensDoLancamento(dados);
+  if (itens && itens.length === 1) {
+    Object.assign(dados, itens[0]);
+    delete dados.itens;
+  } else if (itens) {
+    itens.forEach((item) => {
+      item.textoOriginal = texto;
+      item.ehTransacao = true;
+      aplicarDataDaMensagem(item, texto, hoje, dataAnterior);
+    });
+    dados.ehTransacao = true;
+    return dados;
+  }
+
+  aplicarDataDaMensagem(dados, texto, hoje, dataAnterior);
+  return dados;
 }
 
 async function interpretarImagem(base64, mimetype, legenda, remetente) {
@@ -704,7 +742,7 @@ async function continuarComResposta(dadosParciais, resposta, remetente, chaveRem
   ];
   if (historico) blocos.push({ type: 'text', text: historico });
   blocos.push({ type: 'text', text: contexto });
-  return chamarIA(blocos);
+  return prepararDados(await chamarIA(blocos), resposta, dadosParciais);
 }
 
 // ===================== Transcrição de áudio (Whisper) =====================
@@ -769,7 +807,7 @@ async function salvarTransacao(dados) {
       familia_id: FAMILIA_ID,
       descricao: dados.descricao,
       valor: dados.valor,
-      data: dataDeHoje,
+      data: dados.data || dataDeHoje,
       categoria: dados.categoria,
       pessoa: dados.pessoa || null,
     })
@@ -877,7 +915,11 @@ async function salvarCartao(dados) {
 }
 
 async function salvarCompraCartao(dados) {
-  const hoje = DateTime.now().setZone(FUSO_HORARIO);
+  // A data da compra (se a mensagem disse "ontem", por exemplo) define também a
+  // fatura certa; sem data explícita, vale o dia de hoje, como antes.
+  const hoje = dados.data
+    ? DateTime.fromISO(dados.data, { zone: FUSO_HORARIO })
+    : DateTime.now().setZone(FUSO_HORARIO);
   const dataDeHoje = hoje.toFormat('yyyy-MM-dd');
 
   // Descobre o dia de fechamento e o limite do cartão (se ele já estiver
@@ -1016,7 +1058,7 @@ async function buscarOuCriarCartaoAlimentacao(nome) {
 async function salvarGastoAlimentacao(dados) {
   const nomeCartao = dados.cartao || 'Ticket';
   const cartao = await buscarOuCriarCartaoAlimentacao(nomeCartao);
-  const dataDeHoje = DateTime.now().setZone(FUSO_HORARIO).toFormat('yyyy-MM-dd');
+  const dataDeHoje = dados.data || DateTime.now().setZone(FUSO_HORARIO).toFormat('yyyy-MM-dd');
   const novoSaldo = Number(cartao.saldo_atual) - Number(dados.valor);
 
   const { error: errUpdate } = await supabase
@@ -1048,7 +1090,7 @@ async function salvarGastoAlimentacao(dados) {
 async function salvarRecargaAlimentacao(dados) {
   const nomeCartao = dados.cartao || 'Ticket';
   const cartao = await buscarOuCriarCartaoAlimentacao(nomeCartao);
-  const dataDeHoje = DateTime.now().setZone(FUSO_HORARIO).toFormat('yyyy-MM-dd');
+  const dataDeHoje = dados.data || DateTime.now().setZone(FUSO_HORARIO).toFormat('yyyy-MM-dd');
   const novoSaldo = Number(cartao.saldo_atual) + Number(dados.valor);
 
   const { error: errUpdate } = await supabase
@@ -1166,14 +1208,25 @@ const PESSOAS_VALIDAS = ['Jeferson', 'Raquel'];
 async function resolverCartaoAlimentacaoAmbiguo(dados) {
   if (dados.tipo !== 'gasto_alimentacao' && dados.tipo !== 'recarga_alimentacao') return null;
   const cartoes = await buscarCartoesAlimentacaoAtivos();
-  if (cartoes.length <= 1) {
-    if (cartoes.length === 1 && !dados.cartao) dados.cartao = cartoes[0].nome;
+  const nomes = cartoes.map((c) => c.nome);
+  // Regra em interpretacao.js: só usa um cartão cadastrado se a pessoa citou
+  // esse nome (ou um termo genérico como "vale"); nome novo só é criado se ela
+  // digitou esse nome na mensagem. Qualquer outro caso pergunta, em vez de
+  // trocar o cartão no palpite (foi assim que "VR" virou "Ticket").
+  const decisao = decidirCartaoAlimentacao({
+    cartao: dados.cartao,
+    texto: dados.textoOriginal || '',
+    nomesCadastrados: nomes,
+  });
+  if (decisao.acao === 'usar' || decisao.acao === 'criar') {
+    dados.cartao = decisao.nome;
     return null;
   }
-  if (dados.cartao && cartoes.some((c) => c.nome.trim().toLowerCase() === dados.cartao.trim().toLowerCase())) {
-    return null;
+  if (nomes.length === 0) {
+    return 'Você poderia me dizer o nome do cartão alimentação usado, por favor?';
   }
-  return `Qual cartão alimentação foi usado, por favor? (${cartoes.map((c) => c.nome).join(', ')})`;
+  const citado = dados.cartao ? ` "${dados.cartao}"` : '';
+  return `Não encontrei o cartão${citado} entre os seus cartões alimentação. Foi em qual destes: ${nomes.join(', ')}? Se for outro, me diga o nome, por favor.`;
 }
 
 function validarDados(dados) {
@@ -2482,6 +2535,25 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
   if (!dados.ehTransacao) {
     console.log('ℹ️  Mensagem não é uma transação financeira, respondendo de forma casual.');
     await enviarResposta(dados.respostaCasual || 'Oi! 😊');
+    return;
+  }
+
+  // Mensagem com mais de um lançamento (ex: "gastei 25 no posto e 15 no
+  // estacionamento"): registra cada um. Se algum item estiver incompleto, não
+  // grava nada e pede pra enviar um de cada vez — assim nenhum lançamento some.
+  const itens = itensDoLancamento(dados);
+  if (itens) {
+    const incompleto = itens.some((item) => !item.tipo || (item.faltando && item.faltando.length > 0));
+    if (incompleto) {
+      await enviarResposta(
+        'Vi mais de um lançamento na sua mensagem, e algum deles ainda está sem um detalhe. Você poderia me enviar um de cada vez, por favor? 😊'
+      );
+      return;
+    }
+    console.log(`🧾 Mensagem com ${itens.length} lançamentos, registrando um por um.`);
+    for (const item of itens) {
+      await finalizarLancamento(item, { chaveRemetente, nomeRemetente, alvoCorrecao, enviarResposta });
+    }
     return;
   }
 
