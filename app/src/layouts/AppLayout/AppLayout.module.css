@@ -37,6 +37,12 @@
   transition: transform var(--transicao-rapida);
 }
 
+/* robô do botão em tamanho maior no navegador */
+.fabDesktop > div {
+  width: 84px !important;
+  height: 84px !important;
+}
+
 .fabDesktop:hover {
   transform: translateY(-2px);
 }
