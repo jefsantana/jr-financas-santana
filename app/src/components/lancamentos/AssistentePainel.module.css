@@ -41,6 +41,12 @@
   border-bottom: 1px solid var(--cor-borda);
 }
 
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .titulo {
   font-family: var(--fonte-display);
   font-size: 1rem;
@@ -70,6 +76,20 @@
   min-height: 0;
   padding: var(--espaco-md) var(--espaco-lg);
   overflow-y: auto;
+}
+
+/* minimizado: sobra só a barra do título (o chat continua montado, escondido,
+   pra conversa não se perder) */
+.painel.painelMinimizado {
+  height: auto;
+}
+
+.painelMinimizado .cabecalho {
+  border-bottom: none;
+}
+
+.painelMinimizado .corpo {
+  display: none;
 }
 
 /* celular: popup colado embaixo e nas laterais, sem folga */

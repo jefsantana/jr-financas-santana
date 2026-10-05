@@ -4,15 +4,11 @@ import { MascoteAssistente } from './MascoteAssistente.jsx';
 import { Avatar } from '../ui/index.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
+import { saudacao } from '../../utils/formatadores.js';
 import styles from './ChatAssistente.module.css';
 
 const BOT_API_URL = import.meta.env.VITE_BOT_API_URL;
 
-const MENSAGEM_BOAS_VINDAS = {
-  autor: 'bot',
-  texto:
-    'E aí! 👋 Bora lançar? Ex: "gastei 45 no mercado, pix".',
-};
 
 // Lê um File/Blob e devolve só a parte base64 (sem o prefixo "data:...;base64,").
 function lerComoBase64(arquivo) {
@@ -72,7 +68,17 @@ export function ChatAssistente({ aoAbrirManual }) {
   );
   const [pessoaManual, setPessoaManual] = useState(null);
   const pessoa = pessoaManual || pessoaDetectada || pessoas[0] || '';
-  const [mensagens, setMensagens] = useState([MENSAGEM_BOAS_VINDAS]);
+
+  // Saudação pelo horário e pelo nome de quem está logado. Calculada a cada
+  // render (não guardada no estado) pra acompanhar a hora do dia e o perfil,
+  // que pode terminar de carregar depois do chat montar.
+  const primeiroNome = (pessoaDetectada || perfil?.nome || '').trim().split(/s+/)[0];
+  const boasVindas = {
+    autor: 'bot',
+    texto: `${saudacao()}${primeiroNome ? ` ${primeiroNome}` : ''}, bora lançar? 🚀`,
+  };
+  const mensagensVisiveis = [boasVindas, ...mensagens];
+  const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [gravando, setGravando] = useState(false);
@@ -239,7 +245,7 @@ export function ChatAssistente({ aoAbrirManual }) {
       )}
 
       <div className={styles.listaMensagens}>
-        {mensagens.map((m, indice) => (
+        {mensagensVisiveis.map((m, indice) => (
           <div key={indice} className={`${styles.linha} ${m.autor === 'usuario' ? styles.linhaUsuario : ''}`}>
             <div className={styles.avatarBolha}>
               {m.autor === 'usuario' ? <Avatar nome={pessoa} tamanho="pequeno" /> : <MascoteAssistente size={26} />}
