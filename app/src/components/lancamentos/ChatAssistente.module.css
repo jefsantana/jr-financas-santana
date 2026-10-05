@@ -67,7 +67,7 @@
 
 .listaMensagens {
   flex: 1;
-  min-height: 220px;
+  min-height: var(--chat-lista-min, 220px);
   max-height: var(--chat-lista-max, 46vh);
   overflow-y: auto;
   display: flex;

@@ -65,7 +65,8 @@
   .painel {
     top: auto;
     width: 100%;
-    height: min(70dvh, 520px);
+    height: min(50dvh, 400px);
+    --chat-lista-min: 90px;
     border-left: none;
     border-top: 1px solid var(--cor-borda);
     border-radius: 16px 16px 0 0;
