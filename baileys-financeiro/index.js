@@ -197,6 +197,8 @@ O sistema deles tem estes tipos de lançamento possíveis:
 14. "pagamento_conta_fixa" — quando a pessoa avisa que PAGOU/QUITOU uma conta, ou acabou de realizar algum pagamento, e isso pode se referir a uma conta fixa JÁ cadastrada (ex: "paguei o financiamento", "já quitei a internet desse mês", "acabei de pagar o aluguel", ou até só "acabei de realizar o pagamento" sem dizer qual conta ainda). Isso só MARCA a conta existente como paga neste ciclo — NÃO cadastra uma conta nova (isso é tipo 3) nem lança um gasto avulso novo (isso é tipo 1). Campo obrigatório: descricao (o nome da conta, que deve casar com uma das contas fixas cadastradas informadas no contexto). Se a pessoa mencionar que pagou algo mas não disser qual conta, classifique mesmo assim como "pagamento_conta_fixa" com descricao null, faltando: ["descricao"] e pergunta pedindo qual conta cadastrada foi paga — NÃO responda isso como bate-papo casual (respostaCasual), porque é um pedido real que precisa ficar pendente até a pessoa completar. NUNCA confunda com "correcao": isso não é corrigir um valor errado de um lançamento, é confirmar que um pagamento recorrente já cadastrado foi feito.
 15. "cadastro_cartao" — quando a pessoa pede pra ADICIONAR/CADASTRAR um cartão de crédito NOVO no sistema (ex: "adiciona um cartão de crédito pra mim", "cadastra o cartão Nubank", "quero cadastrar um cartão novo, limite 3000, fecha dia 10"). Isso só REGISTRA o cartão em si — NÃO é uma compra (isso é compra_cartao, tipo 4). Campo obrigatório: cartao (o nome do cartão novo, ex: "Nubank", "Inter"). Campos opcionais: limite (valor numérico do limite de crédito), dia_fechamento (dia 1-31 que fecha a fatura), dia_vencimento (dia 1-31 que vence o pagamento da fatura) — não pergunte por esses três se a pessoa não mencionar, só o nome é realmente necessário; pode perguntar se quer informar limite/fechamento/vencimento, mas se ela disser "não" ou não responder isso, cadastra só com o nome mesmo.
 16. "correcao" — quando a pessoa está corrigindo um lançamento que JÁ foi registrado antes (ex: "corrige, era 45 não 50", "errei a categoria, é Saúde", "não foi no Nubank, foi no Inter", "o valor certo é 120"). Você pode receber um aviso no contexto dizendo que essa mensagem é uma resposta direta a uma confirmação anterior — nesse caso é quase certo que seja uma correção daquele lançamento específico. Preencha APENAS o campo que está sendo corrigido, usando o MESMO nome de campo das outras categorias (descricao, valor, categoria, pessoa, dia_vencimento, cartao, numero_parcelas, valor_total, valor_alvo, limite_mensal, limite ou dia_fechamento) — deixe todos os outros null, MESMO que a mensagem mencione outras coisas de passagem (ex: "neste cartão, adiciona o limite de 200, no Nubank" — se o lançamento já é o cartão Nubank, "Nubank" ali é só contexto pra identificar do que se trata, NÃO é uma correção do nome do cartão; preencha só "limite": 200, deixe "cartao" null). Se não ficar claro qual valor é o correto (ex: "45 não 50" pode gerar dúvida), assuma que o ÚLTIMO número mencionado, ou o que vier depois de "é"/"na verdade é"/"o certo é", é o valor correto.
+
+ALTERAR A DATA DE UM LANÇAMENTO JÁ FEITO também é "correcao": quando a pessoa pede pra mudar/alterar/ajustar/trocar/passar a DATA (ou o dia) de uma entrada, gasto, compra, recarga etc. que acabou de lançar — ex: "altera a entrada pra dia 30/09", "muda a data desse gasto pra ontem", "esse lançamento foi dia 28", "lancei hoje mas era do dia 30/09", "ajusta a data da recarga do Ticket para 30 de setembro" — classifique como tipo "correcao" (NUNCA como uma "entrada"/"gasto"/"recarga_alimentacao" novos, mesmo que a mensagem cite o valor, o nome do cartão ou a palavra "entrada"/"gasto": ali essas palavras só dizem QUAL lançamento ajustar). Deixe TODOS os campos de dados null (descricao, valor, categoria, pessoa, cartao etc.) — o sistema lê a data sozinho do texto da mensagem, e preencher qualquer outro campo faria um dado do lançamento ser sobrescrito sem a pessoa ter pedido. Isso vale para qualquer formato de data que a pessoa escrever (30/09, dia 30, 30 de setembro, ontem, anteontem, hoje).
 17. "exclusao" — quando a pessoa pede pra APAGAR/EXCLUIR/CANCELAR/REMOVER um lançamento que JÁ foi registrado por completo (diferente de "correcao", que só AJUSTA um campo errado — "exclusao" remove o lançamento inteiro). Ex: "apaga esse gasto", "cancela esse lançamento, foi engano", "exclui a meta de viagem", "remove esse cartão", "não era pra ter lançado isso, apaga". Igual à correção, geralmente vem como reply a uma confirmação anterior, ou se refere ao lançamento mais recente da pessoa. Não precisa de nenhum campo — todos os campos de dados ficam null, só o "tipo" e "ehTransacao": true importam.
 
 A data de gasto/entrada/compra_cartao/gasto_alimentacao é preenchida automaticamente pelo sistema — nunca pergunte por ela nem tente adivinhá-la. O sistema já entende expressões como "ontem", "anteontem" e "dia 5 do mês passado" a partir do texto, então não precisa calcular datas.
@@ -279,6 +281,8 @@ Alguns exemplos de como classificar mensagens parecidas (siga esse padrão de ra
 - "adiciona um cartão de crédito pra mim" (sem dizer o nome) → tipo "cadastro_cartao", cartao null, faltando: ["cartao"], pergunta: "Qual o nome do cartão? (ex: Nubank, Inter)".
 - "cadastra o cartão Nubank, limite 3000, fecha dia 10" → tipo "cadastro_cartao", cartao "Nubank", limite 3000, dia_fechamento 10, faltando: [].
 - "corrige, o valor certo é 80" (logo após uma confirmação de lançamento) → tipo "correcao", campo "valor", valor 80, todos os outros campos null.
+- "adicionei o Ticket de 1047, altera a entrada pra 30/09" (ou "muda a data da entrada para o dia 30/09") → tipo "correcao", TODOS os campos null (valor 1047 e "Ticket" só identificam o lançamento; a data 30/09 é lida pelo sistema), faltando: [].
+- "esse gasto foi ontem, não hoje" (logo após um lançamento) → tipo "correcao", todos os campos null.
 - "apaga esse lançamento, foi engano" (respondendo/logo após uma confirmação) → tipo "exclusao", todos os campos null (não precisa de nenhum dado, só remove o que foi identificado como alvo).
 - "cancela a meta de viagem" → tipo "exclusao" (quer remover a meta inteira, não ajustar um valor dela).
 - "bom dia" → ehTransacao: false, respostaCasual: "Bom dia! ☀️ Tudo certo por aí?".`;
@@ -1499,21 +1503,65 @@ function rotuloCampo(campo) {
     limite_mensal: '💵 Limite mensal',
     limite: '💰 Limite do cartão',
     dia_fechamento: '📅 Dia de fechamento',
+    data: '📅 Data',
   };
   return rotulos[campo] || campo;
 }
 
 function formatarValorCampo(campo, valor) {
   const camposMonetarios = ['valor', 'valor_total', 'valor_alvo', 'limite_mensal', 'limite'];
+  if (campo === 'data') return formatarDataBR(valor);
   return camposMonetarios.includes(campo) ? `R$ ${formatarReais(valor)}` : valor;
 }
 
+// Coluna que guarda a data do lançamento em cada tabela (só estas têm data
+// editável — meta, orçamento, conta fixa, etc. não têm data de lançamento).
+const COLUNA_DATA_POR_TABELA = {
+  gastos: 'data',
+  entradas: 'data',
+  movimentos_cartao_alimentacao: 'data',
+  compras_cartao: 'data_compra',
+};
+
+// Campos que a IA costuma preencher só por contexto numa correção de data
+// (descrição/categoria/pessoa do lançamento que já existe). Quando a pessoa
+// pediu pra mudar a data, esses NÃO são o que ela quer alterar.
+const CAMPOS_DE_CONTEXTO = ['descricao', 'categoria', 'pessoa'];
+
+// A fatura de uma compra no cartão depende da data: comprou depois do dia de
+// fechamento, cai na fatura do mês seguinte. Recalcula ao mudar a data.
+async function calcularMesFatura(nomeCartao, dataISO) {
+  const data = DateTime.fromISO(dataISO, { zone: FUSO_HORARIO });
+  let mesFatura = data.toFormat('yyyy-MM');
+  const { data: cartaoInfo } = await supabase
+    .from('cartoes')
+    .select('dia_fechamento')
+    .eq('familia_id', FAMILIA_ID)
+    .ilike('nome', nomeCartao)
+    .is('excluido_em', null)
+    .maybeSingle();
+  if (cartaoInfo?.dia_fechamento && data.day > cartaoInfo.dia_fechamento) {
+    mesFatura = data.plus({ months: 1 }).toFormat('yyyy-MM');
+  }
+  return mesFatura;
+}
+
 // Aplica uma correção num lançamento já salvo. Se for um movimento de cartão
-// alimentação, também ajusta o saldo do cartão pela diferença.
+// alimentação, também ajusta o saldo do cartão pela diferença. A data
+// (novaData) pode vir junto com outro campo ou sozinha ("altera pra 30/09").
 async function aplicarCorrecao(alvo, dados) {
-  const campo = CAMPOS_CORRIGIVEIS.find((c) => dados[c] !== undefined && dados[c] !== null);
-  if (!campo) throw new Error('Não identifiquei o que corrigir.');
-  const novoValor = dados[campo];
+  const novaData = dados.data || null;
+  let campo = CAMPOS_CORRIGIVEIS.find((c) => dados[c] !== undefined && dados[c] !== null);
+  if (novaData && campo && CAMPOS_DE_CONTEXTO.includes(campo)) campo = undefined;
+  if (!campo && !novaData) throw new Error('Não identifiquei o que corrigir.');
+  const novoValor = campo ? dados[campo] : undefined;
+
+  const colunaData = COLUNA_DATA_POR_TABELA[alvo.tabela];
+  if (novaData && !colunaData) {
+    const erro = new Error(`A tabela ${alvo.tabela} não tem data.`);
+    erro.mensagemParaUsuario = '🤔 Esse tipo de lançamento não tem uma data para alterar. Você poderia me dizer o que quer corrigir, por favor?';
+    throw erro;
+  }
 
   if (alvo.tabela === 'movimentos_cartao_alimentacao' && campo === 'valor') {
     const { data: movimentoAntigo, error: errBusca } = await supabase
@@ -1539,20 +1587,42 @@ async function aplicarCorrecao(alvo, dados) {
     if (errUpdateSaldo) throw new Error(errUpdateSaldo.message);
   }
 
+  const atualizacao = {};
+  const alteracoes = [];
+
   // Na tabela "cartoes" (cadastro_cartao) o nome do cartão fica na coluna
   // "nome", não "cartao" (esse é o nome do CAMPO no JSON da IA, reaproveitado
   // do resto do sistema pra evitar mais um nome de campo).
-  const colunaReal = alvo.tabela === 'cartoes' && campo === 'cartao' ? 'nome' : campo;
+  if (campo) {
+    const colunaReal = alvo.tabela === 'cartoes' && campo === 'cartao' ? 'nome' : campo;
+    atualizacao[colunaReal] = novoValor;
+    alteracoes.push({ campo, novoValor });
+  }
+
+  if (novaData) {
+    atualizacao[colunaData] = novaData;
+    alteracoes.push({ campo: 'data', novoValor: novaData });
+
+    if (alvo.tabela === 'compras_cartao') {
+      const { data: compra, error: errCompra } = await supabase
+        .from('compras_cartao')
+        .select('cartao')
+        .eq('id', alvo.registroId)
+        .single();
+      if (errCompra) throw new Error(errCompra.message);
+      atualizacao.mes_fatura = await calcularMesFatura(campo === 'cartao' ? novoValor : compra.cartao, novaData);
+    }
+  }
 
   const { data, error } = await supabase
     .from(alvo.tabela)
-    .update({ [colunaReal]: novoValor })
+    .update(atualizacao)
     .eq('id', alvo.registroId)
     .select()
     .single();
   if (error) throw new Error(error.message);
 
-  return { campo, novoValor, registro: data };
+  return { alteracoes, registro: data };
 }
 
 // Exclui (soft-delete, igual ao "excluir" do site — vai pra lixeira, dá pra
@@ -2635,13 +2705,14 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
     }
     try {
       const resultado = await aplicarCorrecao(alvoCorrecao, dados);
-      await enviarResposta(
-        `✏️ *Lançamento corrigido!*\n${rotuloCampo(resultado.campo)}: ${formatarValorCampo(resultado.campo, resultado.novoValor)}`
-      );
-      console.log(`✏️  Correção aplicada: ${resultado.campo} → ${resultado.novoValor}`);
+      const linhas = resultado.alteracoes.map((a) => `${rotuloCampo(a.campo)}: ${formatarValorCampo(a.campo, a.novoValor)}`);
+      await enviarResposta(`✏️ *Lançamento corrigido!*\n${linhas.join('\n')}`);
+      console.log(`✏️  Correção aplicada: ${resultado.alteracoes.map((a) => `${a.campo} → ${a.novoValor}`).join(', ')}`);
     } catch (err) {
       console.error('Erro ao aplicar correção:', err.message);
-      await enviarResposta('⚠️ Entendi a correção, mas tive um problema ao salvar. Você poderia tentar novamente, por favor?');
+      await enviarResposta(
+        err.mensagemParaUsuario || '⚠️ Entendi a correção, mas tive um problema ao salvar. Você poderia tentar novamente, por favor?'
+      );
     }
     return;
   }

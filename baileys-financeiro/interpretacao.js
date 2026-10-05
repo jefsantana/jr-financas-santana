@@ -19,13 +19,48 @@ function normalizarTexto(texto) {
     .toLowerCase();
 }
 
+const MESES = {
+  janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6,
+  julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+};
+
+// Monta 'yyyy-MM-dd' a partir de dia/mês (e ano opcional). Sem ano, assume o
+// ano atual — e, se isso cair no futuro (ex: "30/12" em outubro), o ano
+// passado, já que as pessoas lançam o que JÁ aconteceu. Data inexistente
+// (31/02) vira null em vez de virar outra data.
+function montarData(dia, mes, ano, hoje) {
+  let anoFinal = ano;
+  if (anoFinal === undefined) {
+    anoFinal = hoje.year;
+    const candidata = DateTime.fromObject({ year: anoFinal, month: mes, day: dia }, { zone: hoje.zone });
+    if (candidata.isValid && candidata > hoje) anoFinal -= 1;
+  } else if (anoFinal < 100) {
+    anoFinal += 2000;
+  }
+  const data = DateTime.fromObject({ year: anoFinal, month: mes, day: dia }, { zone: hoje.zone });
+  return data.isValid ? data.toFormat('yyyy-MM-dd') : null;
+}
+
 // Lê a data só de expressões explícitas no texto: "hoje", "ontem", "anteontem",
-// "dia 5" e "dia 5 do mês passado". Retorna 'yyyy-MM-dd' ou null (sem data
-// explícita, o sistema usa a data de hoje, como antes).
+// "30/09", "30/09/2026", "30 de setembro", "dia 5" e "dia 5 do mês passado".
+// Retorna 'yyyy-MM-dd' ou null (sem data explícita, o sistema usa a data de
+// hoje, como antes).
 function extrairDataDaMensagem(texto, hoje) {
   const t = normalizarTexto(texto);
   if (/\banteontem\b/.test(t)) return hoje.minus({ days: 2 }).toFormat('yyyy-MM-dd');
   if (/\bontem\b/.test(t)) return hoje.minus({ days: 1 }).toFormat('yyyy-MM-dd');
+  if (/\bhoje\b/.test(t)) return hoje.toFormat('yyyy-MM-dd');
+
+  const dataBarra = t.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if (dataBarra) {
+    const data = montarData(Number(dataBarra[1]), Number(dataBarra[2]), dataBarra[3] ? Number(dataBarra[3]) : undefined, hoje);
+    if (data) return data;
+  }
+  const dataPorExtenso = t.match(/\b(\d{1,2})\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{4}))?\b/);
+  if (dataPorExtenso) {
+    const data = montarData(Number(dataPorExtenso[1]), MESES[dataPorExtenso[2]], dataPorExtenso[3] ? Number(dataPorExtenso[3]) : undefined, hoje);
+    if (data) return data;
+  }
 
   const diaMes = t.match(/\bdia (\d{1,2})\b(?:\s+d[oe]\s+mes\s+(passado|anterior))?/);
   if (diaMes) {
@@ -45,7 +80,9 @@ function extrairDataDaMensagem(texto, hoje) {
 // é descartada: só vale a data explícita da mensagem (ou a já guardada numa
 // pendência anterior).
 function aplicarDataDaMensagem(dados, texto, hoje, dataAnterior = null) {
-  if (!dados || !TIPOS_COM_DATA.includes(dados.tipo)) return dados;
+  // "correcao" também lê a data: é assim que a pessoa muda a data de um
+  // lançamento que já foi salvo ("altera a entrada pra 30/09").
+  if (!dados || !(TIPOS_COM_DATA.includes(dados.tipo) || dados.tipo === 'correcao')) return dados;
   const dataExtraida = extrairDataDaMensagem(texto, hoje);
   dados.data = dataExtraida || dataAnterior || null;
   return dados;

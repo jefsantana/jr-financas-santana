@@ -92,3 +92,47 @@ test('itens: sem lista, retorna null (fluxo normal)', () => {
   assert.equal(itensDoLancamento({ tipo: 'gasto', valor: 25 }), null);
   assert.equal(itensDoLancamento({ itens: [] }), null);
 });
+
+// Hoje fixo: 5 de outubro de 2026 (caso real: lançou hoje e pediu pra mudar a entrada pro dia 30/09).
+const HOJE_05_10 = DateTime.fromISO('2026-10-05', { zone: 'America/Sao_Paulo' });
+
+test('data: "30/09" vira 30 de setembro do ano atual', () => {
+  assert.equal(extrairDataDaMensagem('altera a entrada pra dia 30/09', HOJE_05_10), '2026-09-30');
+});
+test('data: dd/mm/aaaa respeita o ano informado', () => {
+  assert.equal(extrairDataDaMensagem('foi em 15/08/2025', HOJE_05_10), '2025-08-15');
+});
+test('data: dd/mm/aa com ano de dois dígitos vira 20aa', () => {
+  assert.equal(extrairDataDaMensagem('foi em 15/08/25', HOJE_05_10), '2025-08-15');
+});
+test('data: dd/mm que ainda não chegou neste ano cai no ano passado', () => {
+  assert.equal(extrairDataDaMensagem('lancei errado, era 20/12', HOJE_05_10), '2025-12-20');
+});
+test('data: "30 de setembro" por extenso', () => {
+  assert.equal(extrairDataDaMensagem('muda a data para 30 de setembro', HOJE_05_10), '2026-09-30');
+});
+test('data: "1 de março de 2026" com ano e mês com cedilha/acento normalizado', () => {
+  assert.equal(extrairDataDaMensagem('foi em 1 de março de 2026', HOJE_05_10), '2026-03-01');
+});
+test('data: data inexistente (31/02) não vira outra data', () => {
+  assert.equal(extrairDataDaMensagem('foi dia 31/02', HOJE_05_10), null);
+});
+test('data: valor com barra que não é data (50/50) é ignorado', () => {
+  assert.equal(extrairDataDaMensagem('dividi 50/50 com a Raquel', HOJE_05_10), null);
+});
+test('data: "hoje" vira a data de hoje', () => {
+  assert.equal(extrairDataDaMensagem('muda pra hoje', HOJE_05_10), '2026-10-05');
+});
+test('data: o valor 1047,00 não atrapalha a leitura da data', () => {
+  assert.equal(extrairDataDaMensagem('adicionei o ticket de 1047,00, altera a entrada para o dia 30/09', HOJE_05_10), '2026-09-30');
+});
+test('correcao: lê a data do texto e descarta a que a IA devolveu', () => {
+  const dados = { tipo: 'correcao', data: '2020-01-01' };
+  aplicarDataDaMensagem(dados, 'altera a entrada pra dia 30/09', HOJE_05_10);
+  assert.equal(dados.data, '2026-09-30');
+});
+test('correcao: sem data no texto, não deixa data nenhuma', () => {
+  const dados = { tipo: 'correcao', data: '2020-01-01', valor: 80 };
+  aplicarDataDaMensagem(dados, 'corrige, o valor certo é 80', HOJE_05_10);
+  assert.equal(dados.data, null);
+});
