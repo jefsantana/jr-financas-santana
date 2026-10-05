@@ -11,7 +11,7 @@ const BOT_API_URL = import.meta.env.VITE_BOT_API_URL;
 const MENSAGEM_BOAS_VINDAS = {
   autor: 'bot',
   texto:
-    'Oi! Pode me contar um gasto, uma entrada, uma conta fixa, ou perguntar seu saldo, mandar uma foto do comprovante ou até um áudio — igual você já faz no grupo do WhatsApp. Ex: "gastei 45 no mercado, no pix".',
+    'E aí! 👋 Bora lançar? Ex: "gastei 45 no mercado, pix".',
 };
 
 // Lê um File/Blob e devolve só a parte base64 (sem o prefixo "data:...;base64,").
@@ -128,14 +128,14 @@ export function ChatAssistente({ aoAbrirManual }) {
         return;
       }
 
-      const respostas = dados.respostas?.length ? dados.respostas : ['🤔 Não tive uma resposta pra isso.'];
+      const respostas = dados.respostas?.length ? dados.respostas : ['🤔 Fiquei sem resposta. Tenta de novo?'];
       setMensagens((atuais) => [...atuais, ...respostas.map((r) => ({ autor: 'bot', texto: r }))]);
       if (falar) {
         window.speechSynthesis?.cancel();
         respostas.forEach(falarResposta);
       }
     } catch {
-      const erro = 'Não consegui falar com o assistente agora. Verifique sua conexão e tente de novo.';
+      const erro = 'Fiquei sem sinal por aqui 📡 Tenta de novo?';
       setMensagens((atuais) => [...atuais, { autor: 'bot', texto: erro }]);
       if (falar) falarResposta(erro);
     } finally {
@@ -217,7 +217,7 @@ export function ChatAssistente({ aoAbrirManual }) {
         <MascoteAssistente size={56} />
         <div>
           <p className={styles.cabecalhoTitulo}>Assistente Santana</p>
-          <p className={styles.cabecalhoSubtitulo}>Descreva, fotografe ou fale o lançamento — eu registro pra você.</p>
+          <p className={styles.cabecalhoSubtitulo}>Escreva, fale ou mande a foto.</p>
           {pessoaDetectada && <p className={styles.cabecalhoPessoa}>Lançando como {pessoaDetectada}</p>}
         </div>
       </div>

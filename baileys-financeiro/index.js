@@ -177,7 +177,7 @@ async function responder(chaveRemetente, texto) {
 // ===================== IA: interpretar a mensagem =====================
 const SYSTEM_PROMPT = `Você é o assistente financeiro de um casal (Jeferson e Raquel) que controla as finanças da casa pelo WhatsApp, respondendo dentro do grupo "CONTROLE FINANCEIRO". A mensagem pode ser um texto curto OU uma foto de comprovante de pagamento/compra (com ou sem legenda).
 
-TOM DE VOZ (vale para todo texto que você escrever para as pessoas — "comentario", "pergunta" e "respostaCasual"): seja sempre cordial e educado, mesmo em respostas curtas. Trate as pessoas com gentileza, evite frases secas ou imperativas ("manda de novo") — prefira um tom cordial ("você poderia me enviar de novo, por favor?"). Isso vale inclusive quando algo deu errado ou falta informação: reconheça com educação antes de pedir o que falta, nunca soe seco ou robótico. Continua podendo ser natural, breve e usar emoji com moderação — cordialidade não é formalidade excessiva nem é bajulação, é tratar bem quem está do outro lado.
+TOM DE VOZ (vale para todo texto que você escrever para as pessoas — "comentario", "pergunta" e "respostaCasual"): seja sempre cordial e educado, mesmo em respostas curtas. Trate as pessoas com gentileza, evite frases secas ou imperativas ("manda de novo") — prefira um tom cordial ("você poderia me enviar de novo, por favor?"). Isso vale inclusive quando algo deu errado ou falta informação: reconheça com educação antes de pedir o que falta, nunca soe seco ou robótico. Continua podendo ser natural, breve e usar emoji com moderação — cordialidade não é formalidade excessiva nem é bajulação, é tratar bem quem está do outro lado. BREVIDADE: as respostas precisam ser CURTAS — "pergunta" e "respostaCasual" com no máximo 12 palavras, frases diretas, simpáticas e com um toque criativo; nada de rodeios, desculpas longas nem "por favor" repetido.
 
 O sistema deles tem estes tipos de lançamento possíveis:
 
@@ -1559,7 +1559,7 @@ async function aplicarCorrecao(alvo, dados) {
   const colunaData = COLUNA_DATA_POR_TABELA[alvo.tabela];
   if (novaData && !colunaData) {
     const erro = new Error(`A tabela ${alvo.tabela} não tem data.`);
-    erro.mensagemParaUsuario = '🤔 Esse tipo de lançamento não tem uma data para alterar. Você poderia me dizer o que quer corrigir, por favor?';
+    erro.mensagemParaUsuario = '🤔 Esse lançamento não tem data. O que quer ajustar?';
     throw erro;
   }
 
@@ -2522,7 +2522,7 @@ async function iniciar() {
         await apagarPendencia(chaveRemetente);
       } catch (err) {
         console.error('Erro ao continuar lançamento pendente:', err.message);
-        await responder(chaveRemetente, '🤔 Desculpe, não entendi bem sua resposta. Você poderia tentar novamente, com outras palavras, por favor?');
+        await responder(chaveRemetente, '🤔 Não peguei essa. Tenta de outro jeito?');
         return; // mantém a pendência ativa pra pessoa poder tentar de novo
       }
     } else if (ehTexto) {
@@ -2535,7 +2535,7 @@ async function iniciar() {
         registrarHistorico(chaveRemetente, 'usuario', texto);
       } catch (err) {
         console.error('Erro ao chamar a IA (texto):', err.message);
-        await responder(chaveRemetente, '🤔 Desculpe, não consegui entender essa mensagem. Você poderia reformular, por gentileza? Por exemplo: "gastei 50 no mercado".');
+        await responder(chaveRemetente, '🤔 Não entendi essa. Tenta assim: "gastei 50 no mercado".');
         return;
       }
     } else if (tipoMsg === 'imageMessage') {
@@ -2550,7 +2550,7 @@ async function iniciar() {
         registrarHistorico(chaveRemetente, 'usuario', `[enviou uma foto de comprovante]${legenda ? ` legenda: ${legenda}` : ''}`);
       } catch (err) {
         console.error('Erro ao processar imagem:', err.message);
-        await responder(chaveRemetente, '🤔 Desculpe, não consegui ler essa imagem direito. Você poderia enviá-la novamente, por favor, ou digitar o gasto por texto?');
+        await responder(chaveRemetente, '🤔 A foto ficou ilegível. Manda outra ou digita o gasto?');
         return;
       }
     } else if (tipoMsg === 'audioMessage') {
@@ -2566,7 +2566,7 @@ async function iniciar() {
         const textoTranscrito = await transcreverAudio(buffer, mimetype);
         if (!textoTranscrito.trim()) {
           console.log('ℹ️  Transcrição veio vazia, ignorando.');
-          await responder(chaveRemetente, '🤔 Desculpe, não consegui entender o áudio. Você poderia falar novamente, por favor, ou mandar por texto?');
+          await responder(chaveRemetente, '🤔 Não entendi o áudio. Fala de novo ou escreve?');
           return;
         }
         console.log(`📝 Transcrito: "${textoTranscrito}"`);
@@ -2574,7 +2574,7 @@ async function iniciar() {
         registrarHistorico(chaveRemetente, 'usuario', textoTranscrito);
       } catch (err) {
         console.error('Erro ao processar áudio:', err.message);
-        await responder(chaveRemetente, '🤔 Desculpe, não consegui entender o áudio. Você poderia falar novamente, por favor, ou mandar por texto?');
+        await responder(chaveRemetente, '🤔 Não entendi o áudio. Fala de novo ou escreve?');
         return;
       }
     } else {
@@ -2616,7 +2616,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
     const incompleto = itens.some((item) => !item.tipo || (item.faltando && item.faltando.length > 0));
     if (incompleto) {
       await enviarResposta(
-        'Vi mais de um lançamento na sua mensagem, e algum deles ainda está sem um detalhe. Você poderia me enviar um de cada vez, por favor? 😊'
+        'Vi vários lançamentos e falta um detalhe. Manda um de cada vez? 😊'
       );
       return;
     }
@@ -2691,7 +2691,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
     } catch (err) {
       console.error('Erro ao registrar pagamento de conta fixa:', err.message);
       await enviarResposta(
-        `🤔 Não encontrei "${dados.descricao}" entre as contas fixas cadastradas. Você poderia confirmar o nome certo, por favor?`
+        `🤔 Não achei "${dados.descricao}" nas contas fixas. Qual o nome certo?`
       );
     }
     return;
@@ -2700,7 +2700,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
   // Correção de um lançamento já salvo (por reply ou "corrige, era X").
   if (dados.tipo === 'correcao') {
     if (!alvoCorrecao) {
-      await enviarResposta('🤔 Não encontrei nenhum lançamento recente seu para corrigir. Você poderia me enviar os dados completos novamente, por favor?');
+      await enviarResposta('🤔 Não achei nada seu pra corrigir. Manda o lançamento completo?');
       return;
     }
     try {
@@ -2711,7 +2711,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
     } catch (err) {
       console.error('Erro ao aplicar correção:', err.message);
       await enviarResposta(
-        err.mensagemParaUsuario || '⚠️ Entendi a correção, mas tive um problema ao salvar. Você poderia tentar novamente, por favor?'
+        err.mensagemParaUsuario || '⚠️ Entendi, mas tropecei ao salvar. Tenta de novo?'
       );
     }
     return;
@@ -2722,7 +2722,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
   // restaurar lá se for engano.
   if (dados.tipo === 'exclusao') {
     if (!alvoCorrecao) {
-      await enviarResposta('🤔 Não encontrei nenhum lançamento recente seu para excluir. Você poderia responder à mensagem de confirmação dele, por favor?');
+      await enviarResposta('🤔 Não achei nada seu pra excluir. Responde à confirmação dele?');
       return;
     }
     try {
@@ -2733,7 +2733,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
       console.log('🗑️  Lançamento excluído.');
     } catch (err) {
       console.error('Erro ao excluir lançamento:', err.message);
-      await enviarResposta('⚠️ Entendi que você quer excluir, mas tive um problema. Você poderia tentar novamente, por favor?');
+      await enviarResposta('⚠️ Tropecei ao excluir. Tenta de novo?');
     }
     return;
   }
@@ -2780,7 +2780,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
   if (!TIPOS_LANCAMENTO_SUPORTADOS.includes(dados.tipo)) {
     console.warn(`⚠️  Tipo não suportado retornado pela IA: ${JSON.stringify(dados.tipo)}`);
     await enviarResposta(
-      '🤔 Entendi que você quer registrar algo, mas isso ainda não é uma função que eu sei fazer no sistema. Você poderia descrever de outro jeito, por favor (ex: um gasto, uma conta fixa, um cartão, uma meta)?'
+      '🤔 Isso eu ainda não sei fazer. Tenta um gasto, conta fixa, cartão ou meta?'
     );
     return;
   }
@@ -2853,7 +2853,7 @@ async function finalizarLancamento(dados, { chaveRemetente, nomeRemetente, alvoC
   } catch (err) {
     console.error('Erro ao salvar/confirmar lançamento:', err.message);
     try {
-      await enviarResposta('⚠️ Entendi o lançamento, mas tive um problema ao salvar no sistema. Você poderia tentar novamente em instantes, por favor?');
+      await enviarResposta('⚠️ Entendi, mas tropecei ao salvar. Tenta de novo?');
     } catch (e2) {
       console.error('Erro ao avisar sobre falha ao salvar:', e2.message);
     }
@@ -2967,7 +2967,7 @@ function iniciarServidorHttp() {
         const buffer = Buffer.from(audioBase64, 'base64');
         const textoTranscrito = await transcreverAudio(buffer, audioMimetype || 'audio/webm');
         if (!textoTranscrito.trim()) {
-          return res.json({ respostas: ['🤔 Desculpe, não consegui entender o áudio. Você poderia falar novamente, por favor, ou mandar por texto?'] });
+          return res.json({ respostas: ['🤔 Não entendi o áudio. Fala de novo ou escreve?'] });
         }
         dados = await interpretarMensagem(textoTranscrito, pessoa, null, chaveRemetente);
         registrarHistorico(chaveRemetente, 'usuario', textoTranscrito);
@@ -2986,7 +2986,7 @@ function iniciarServidorHttp() {
             await apagarPendencia(chaveRemetente);
           } catch (err) {
             console.error('Erro ao continuar lançamento pendente (chat):', err.message);
-            return res.json({ respostas: ['🤔 Desculpe, não entendi bem sua resposta. Você poderia tentar novamente, com outras palavras, por favor?'] });
+            return res.json({ respostas: ['🤔 Não peguei essa. Tenta de outro jeito?'] });
           }
         } else {
           dados = await interpretarMensagem(textoMensagem, pessoa, null, chaveRemetente);
@@ -2999,7 +2999,7 @@ function iniciarServidorHttp() {
       res.json({ respostas });
     } catch (err) {
       console.error('Erro no /chat:', err.message);
-      res.status(500).json({ erro: 'Não consegui processar sua mensagem agora. Você poderia tentar novamente em instantes, por favor?' });
+      res.status(500).json({ erro: 'Não consegui agora. Tenta de novo em instantes?' });
     }
   });
 
