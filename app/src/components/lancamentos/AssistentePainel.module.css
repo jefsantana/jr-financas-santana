@@ -1,0 +1,88 @@
+.painel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--largura-painel-assistente);
+  display: flex;
+  flex-direction: column;
+  background: var(--cor-superficie);
+  border-left: 1px solid var(--cor-borda);
+  z-index: 90;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform var(--transicao), visibility var(--transicao);
+  /* no painel a lista de mensagens ocupa a altura toda */
+  --chat-lista-max: none;
+}
+
+.painelAberto {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espaco-md) var(--espaco-lg);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.titulo {
+  font-family: var(--fonte-display);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.botaoFechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--cor-texto-secundario);
+  cursor: pointer;
+}
+
+.botaoFechar:hover {
+  background: var(--cor-borda);
+  color: var(--cor-texto);
+}
+
+.corpo {
+  flex: 1;
+  min-height: 0;
+  padding: var(--espaco-md) var(--espaco-lg);
+  overflow-y: auto;
+}
+
+/* celular: gaveta presa embaixo, ocupando só parte da tela */
+@media (max-width: 640px) {
+  .painel {
+    top: auto;
+    width: 100%;
+    height: min(70dvh, 520px);
+    border-left: none;
+    border-top: 1px solid var(--cor-borda);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
+    transform: translateY(100%);
+    z-index: 210;
+  }
+
+  .painelAberto {
+    transform: translateY(0);
+  }
+
+  .cabecalho {
+    padding: var(--espaco-sm) var(--espaco-md);
+  }
+
+  .corpo {
+    padding: var(--espaco-sm) var(--espaco-md);
+  }
+}

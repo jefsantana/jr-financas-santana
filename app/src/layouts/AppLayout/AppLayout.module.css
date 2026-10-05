@@ -3,7 +3,21 @@
   width: calc(100% - var(--largura-sidebar));
   min-height: 100vh;
   min-height: 100dvh;
-  transition: margin-left var(--transicao), width var(--transicao);
+  transition: margin-left var(--transicao), width var(--transicao), margin-right var(--transicao);
+}
+
+/* painel do assistente aberto: empurra o conteúdo em vez de cobri-lo */
+.mainComPainel {
+  margin-right: var(--largura-painel-assistente);
+  width: calc(100% - var(--largura-sidebar) - var(--largura-painel-assistente));
+}
+
+.mainComPainel.mainRecolhido {
+  width: calc(100% - 76px - var(--largura-painel-assistente));
+}
+
+.fabOculto {
+  display: none;
 }
 
 .mainRecolhido {
@@ -80,11 +94,19 @@
     margin-left: 76px;
     width: calc(100% - 76px);
   }
+
+  .mainComPainel,
+  .mainComPainel.mainRecolhido {
+    width: calc(100% - 76px - var(--largura-painel-assistente));
+  }
 }
 
 @media (max-width: 640px) {
-  .main {
+  .main,
+  .mainComPainel,
+  .mainComPainel.mainRecolhido {
     margin-left: 0;
+    margin-right: 0;
     width: 100%;
   }
 
@@ -108,9 +130,10 @@
     height: 60px;
   }
 
-  .fabDesktop svg {
-    width: 56px;
-    height: 56px;
+  /* robô menor no celular (o tamanho de 100px é só do navegador) */
+  .fabDesktop > div {
+    width: 60px !important;
+    height: 60px !important;
   }
 
   .conteudo {
