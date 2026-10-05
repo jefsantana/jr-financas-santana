@@ -91,8 +91,11 @@ export function posicaoDaPessoa(pessoas, nome) {
   return pessoas.findIndex((pessoa) => normalizar(pessoa) === normalizar(nome));
 }
 
-export function saudacao() {
+// Com { madrugada: true}, de 0h às 4h59 vira "Boa madrugada" (o padrão segue
+// sendo "Bom dia" até o meio-dia, como o Dashboard sempre usou).
+export function saudacao({ madrugada = false } = {}) {
   const hora = new Date().getHours();
+  if (madrugada && hora < 5) return 'Boa madrugada';
   if (hora < 12) return 'Bom dia';
   if (hora < 18) return 'Boa tarde';
   return 'Boa noite';

@@ -75,7 +75,7 @@ export function ChatAssistente({ aoAbrirManual }) {
   const primeiroNome = (pessoaDetectada || perfil?.nome || '').trim().split(/s+/)[0];
   const boasVindas = {
     autor: 'bot',
-    texto: `${saudacao()}${primeiroNome ? ` ${primeiroNome}` : ''}, bora lançar? 🚀`,
+    texto: `${saudacao({ madrugada: true })}${primeiroNome ? ` ${primeiroNome}` : ''}, bora lançar? 🚀`,
   };
   const mensagensVisiveis = [boasVindas, ...mensagens];
   const [mensagens, setMensagens] = useState([]);
