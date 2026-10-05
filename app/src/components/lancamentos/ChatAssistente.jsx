@@ -72,13 +72,13 @@ export function ChatAssistente({ aoAbrirManual }) {
   // Saudação pelo horário e pelo nome de quem está logado. Calculada a cada
   // render (não guardada no estado) pra acompanhar a hora do dia e o perfil,
   // que pode terminar de carregar depois do chat montar.
-  const primeiroNome = (pessoaDetectada || perfil?.nome || '').trim().split(/s+/)[0];
+  const primeiroNome = (pessoaDetectada || perfil?.nome || '').trim().split(' ')[0];
   const boasVindas = {
     autor: 'bot',
     texto: `${saudacao({ madrugada: true })}${primeiroNome ? ` ${primeiroNome}` : ''}, bora lançar? 🚀`,
   };
-  const mensagensVisiveis = [boasVindas, ...mensagens];
   const [mensagens, setMensagens] = useState([]);
+  const mensagensVisiveis = [boasVindas, ...mensagens];
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [gravando, setGravando] = useState(false);
