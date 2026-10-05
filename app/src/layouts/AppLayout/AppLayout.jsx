@@ -34,9 +34,7 @@ export function AppLayout() {
         aoAlternarRecolhida={() => setSidebarRecolhida((r) => !r)}
       />
 
-      <div
-        className={`${styles.main} ${sidebarRecolhida ? styles.mainRecolhido : ''} ${painelAssistenteAberto ? styles.mainComPainel : ''}`}
-      >
+      <div className={`${styles.main} ${sidebarRecolhida ? styles.mainRecolhido : ''}`}>
         <Header titulo={titulo} aoAbrirMenu={() => setMenuMobileAberto(true)} />
         <main className={styles.conteudo}>
           <ErrorBoundary chaveReset={location.pathname}>

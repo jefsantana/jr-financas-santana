@@ -1,24 +1,34 @@
+/* Popup flutuante no canto: fica por cima da página, sem empurrar nem
+   redimensionar o conteúdo — dá pra continuar clicando no dashboard. */
 .painel {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--largura-painel-assistente);
+  right: var(--espaco-xl);
+  bottom: var(--espaco-xl);
+  width: 380px;
+  height: min(560px, calc(100dvh - var(--espaco-xl) * 2));
   display: flex;
   flex-direction: column;
   background: var(--cor-superficie);
-  border-left: 1px solid var(--cor-borda);
+  border: 1px solid var(--cor-borda);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
   z-index: 90;
-  transform: translateX(100%);
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  transform-origin: bottom right;
   visibility: hidden;
-  transition: transform var(--transicao), visibility var(--transicao);
-  /* no painel a lista de mensagens ocupa a altura toda */
+  pointer-events: none;
+  transition: opacity var(--transicao), transform var(--transicao), visibility var(--transicao);
+  /* no popup a lista de mensagens ocupa a altura toda */
   --chat-lista-max: none;
 }
 
 .painelAberto {
-  transform: translateX(0);
+  opacity: 1;
+  transform: none;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .cabecalho {
@@ -60,23 +70,16 @@
   overflow-y: auto;
 }
 
-/* celular: gaveta presa embaixo, ocupando só parte da tela */
+/* celular: popup menor, colado embaixo e com folga nas laterais */
 @media (max-width: 640px) {
   .painel {
-    top: auto;
-    width: 100%;
+    left: var(--espaco-sm);
+    right: var(--espaco-sm);
+    bottom: calc(var(--espaco-sm) + env(safe-area-inset-bottom));
+    width: auto;
     height: min(50dvh, 400px);
     --chat-lista-min: 90px;
-    border-left: none;
-    border-top: 1px solid var(--cor-borda);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.18);
-    transform: translateY(100%);
     z-index: 210;
-  }
-
-  .painelAberto {
-    transform: translateY(0);
   }
 
   .cabecalho {
