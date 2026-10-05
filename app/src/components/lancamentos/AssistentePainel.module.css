@@ -2,16 +2,18 @@
    redimensionar o conteúdo — dá pra continuar clicando no dashboard. */
 .painel {
   position: fixed;
-  right: var(--espaco-xl);
-  bottom: var(--espaco-xl);
+  right: 0;
+  bottom: 0;
   width: 380px;
-  height: min(560px, calc(100dvh - var(--espaco-xl) * 2));
+  height: min(560px, 90dvh);
   display: flex;
   flex-direction: column;
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  border-right: none;
+  border-bottom: none;
+  border-radius: 16px 0 0 0;
+  box-shadow: -8px -8px 32px rgba(0, 0, 0, 0.18);
   overflow: hidden;
   z-index: 90;
   opacity: 0;
@@ -70,13 +72,16 @@
   overflow-y: auto;
 }
 
-/* celular: popup menor, colado embaixo e com folga nas laterais */
+/* celular: popup colado embaixo e nas laterais, sem folga */
 @media (max-width: 640px) {
   .painel {
-    left: var(--espaco-sm);
-    right: var(--espaco-sm);
-    bottom: calc(var(--espaco-sm) + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: auto;
+    border-left: none;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
     height: min(50dvh, 400px);
     --chat-lista-min: 90px;
     z-index: 210;
