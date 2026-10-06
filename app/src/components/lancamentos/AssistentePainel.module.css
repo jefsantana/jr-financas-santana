@@ -3,9 +3,9 @@
 .painel {
   position: fixed;
   right: 0;
-  bottom: 0;
+  bottom: var(--teclado, 0px);
   width: 380px;
-  height: min(560px, 90dvh);
+  height: min(560px, 90dvh, var(--altura-visivel, 100dvh));
   display: flex;
   flex-direction: column;
   background: var(--cor-superficie);
@@ -66,9 +66,11 @@
   cursor: pointer;
 }
 
-.botaoFechar:hover {
-  background: var(--cor-borda);
-  color: var(--cor-texto);
+@media (hover: hover) {
+  .botaoFechar:hover {
+    background: var(--cor-borda);
+    color: var(--cor-texto);
+  }
 }
 
 .corpo {
@@ -97,12 +99,12 @@
   .painel {
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--teclado, 0px);
     width: auto;
     border-left: none;
     border-radius: 16px 16px 0 0;
     padding-bottom: env(safe-area-inset-bottom);
-    height: min(50dvh, 400px);
+    height: min(50dvh, 400px, var(--altura-visivel, 100dvh));
     --chat-lista-min: 90px;
     z-index: 210;
   }
@@ -113,5 +115,12 @@
 
   .corpo {
     padding: var(--espaco-sm) var(--espaco-md);
+  }
+}
+
+@media (pointer: coarse) {
+  .botaoFechar {
+    width: 44px;
+    height: 44px;
   }
 }

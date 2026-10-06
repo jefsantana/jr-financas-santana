@@ -54,8 +54,10 @@
   opacity: 0.7;
 }
 
-.botaoFechar:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .botaoFechar:hover {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 640px) {

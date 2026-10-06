@@ -28,8 +28,10 @@
   transition: background-color var(--transicao);
 }
 
-.botaoNav:hover {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .botaoNav:hover {
+    background-color: var(--cor-fundo);
+  }
 }
 
 .filtros {

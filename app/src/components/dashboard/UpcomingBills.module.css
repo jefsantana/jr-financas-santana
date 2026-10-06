@@ -81,7 +81,9 @@
   transition: opacity var(--transicao);
 }
 
-.botaoPagar:hover { opacity: 0.85; }
+@media (hover: hover) {
+  .botaoPagar:hover { opacity: 0.85; }
+}
 .botaoPagar:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 640px) {

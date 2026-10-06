@@ -69,8 +69,10 @@
   transition: background-color var(--transicao);
 }
 
-.botaoIcone:hover {
-  background-color: var(--cor-borda);
+@media (hover: hover) {
+  .botaoIcone:hover {
+    background-color: var(--cor-borda);
+  }
 }
 
 .botaoIcone svg {
@@ -112,6 +114,13 @@
 
   /* 38px fica abaixo do mínimo recomendado de área de toque (~44px) numa
      tela de celular — no desktop o mouse é preciso, no toque não. */
+  .botaoIcone {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (pointer: coarse) {
   .botaoIcone {
     width: 44px;
     height: 44px;

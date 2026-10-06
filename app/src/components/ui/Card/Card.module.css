@@ -6,9 +6,11 @@
   transition: box-shadow var(--transicao), transform var(--transicao), border-color var(--transicao);
 }
 
-.comHover:hover {
-  box-shadow: var(--sombra);
-  transform: translateY(-2px);
+@media (hover: hover) {
+  .comHover:hover {
+    box-shadow: var(--sombra);
+    transform: translateY(-2px);
+  }
 }
 
 .preenchimentoNormal {

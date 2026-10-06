@@ -17,8 +17,10 @@
   transition: background-color var(--transicao);
 }
 
-.gatilho:hover {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .gatilho:hover {
+    background-color: var(--cor-fundo);
+  }
 }
 
 .gatilho:disabled {
@@ -64,6 +66,8 @@
   transition: background-color var(--transicao);
 }
 
-.item:hover {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .item:hover {
+    background-color: var(--cor-fundo);
+  }
 }

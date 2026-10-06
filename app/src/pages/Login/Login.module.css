@@ -113,6 +113,8 @@
   color: var(--cor-primaria);
 }
 
-.linkSecundario:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .linkSecundario:hover {
+    text-decoration: underline;
+  }
 }

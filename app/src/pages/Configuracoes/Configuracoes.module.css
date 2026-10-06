@@ -109,8 +109,10 @@
   transition: transform var(--transicao), box-shadow var(--transicao);
 }
 
-.swatchAcento:hover {
-  transform: scale(1.08);
+@media (hover: hover) {
+  .swatchAcento:hover {
+    transform: scale(1.08);
+  }
 }
 
 .swatchAcentoAtivo {

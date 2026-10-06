@@ -80,8 +80,10 @@
   opacity: 0.55;
 }
 
-.avatarPessoaBotao:hover {
-  opacity: 0.85;
+@media (hover: hover) {
+  .avatarPessoaBotao:hover {
+    opacity: 0.85;
+  }
 }
 
 .avatarPessoaAtivo {
@@ -118,9 +120,11 @@
   transition: background-color var(--transicao), color var(--transicao);
 }
 
-.setaMes:hover {
-  background-color: var(--cor-fundo);
-  color: var(--cor-texto);
+@media (hover: hover) {
+  .setaMes:hover {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+  }
 }
 
 .seletorMesLabel {
@@ -137,8 +141,10 @@
   transition: background-color var(--transicao);
 }
 
-.seletorMesLabel:hover {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .seletorMesLabel:hover {
+    background-color: var(--cor-fundo);
+  }
 }
 
 .seletorMesLabel svg {

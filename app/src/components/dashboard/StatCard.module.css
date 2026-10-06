@@ -24,8 +24,10 @@
   pointer-events: none;
 }
 
-.destaque:hover {
-  box-shadow: 0 14px 34px rgba(123, 97, 255, 0.4);
+@media (hover: hover) {
+  .destaque:hover {
+    box-shadow: 0 14px 34px rgba(123, 97, 255, 0.4);
+  }
 }
 
 .destaque .rotulo {

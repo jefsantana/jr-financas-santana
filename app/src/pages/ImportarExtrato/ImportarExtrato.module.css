@@ -120,8 +120,10 @@
   color: var(--cor-primaria);
 }
 
-.acoesSelecao button:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .acoesSelecao button:hover {
+    text-decoration: underline;
+  }
 }
 
 .linhaDesmarcada {

@@ -30,8 +30,10 @@
   transition: background-color var(--transicao-rapida);
 }
 
-.tabela tbody tr:hover {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .tabela tbody tr:hover {
+    background-color: var(--cor-fundo);
+  }
 }
 
 .tabela th {
@@ -74,10 +76,12 @@
   transition: background-color var(--transicao), color var(--transicao), border-color var(--transicao);
 }
 
-.botaoAcao:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: var(--cor-perigo);
-  border-color: rgba(239, 68, 68, 0.3);
+@media (hover: hover) {
+  .botaoAcao:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--cor-perigo);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
 }
 
 .botaoAcao:disabled {
@@ -122,9 +126,11 @@
     padding: var(--espaco-sm) var(--espaco-md);
   }
 
+  @media (hover: hover) {
   .tabela tbody tr:hover {
-    background-color: var(--cor-superficie);
-  }
+      background-color: var(--cor-superficie);
+    }
+}
 
   .tabela td {
     display: flex;

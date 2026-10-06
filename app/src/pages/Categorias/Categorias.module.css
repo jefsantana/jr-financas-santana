@@ -76,9 +76,11 @@
   transition: background-color var(--transicao), color var(--transicao);
 }
 
-.botaoRemover:hover:not(:disabled) {
-  background-color: rgba(239, 68, 68, 0.12);
-  color: var(--cor-perigo);
+@media (hover: hover) {
+  .botaoRemover:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--cor-perigo);
+  }
 }
 
 .botaoRemover:disabled {

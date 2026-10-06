@@ -55,8 +55,10 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.opcaoPessoa:hover {
-  border-color: var(--cor-primaria);
+@media (hover: hover) {
+  .opcaoPessoa:hover {
+    border-color: var(--cor-primaria);
+  }
 }
 
 .opcaoPessoaAtiva {
@@ -189,8 +191,10 @@
   transition: background 0.15s, color 0.15s, opacity 0.15s;
 }
 
-.botaoSecundario:hover:not(:disabled) {
-  color: var(--cor-primaria);
+@media (hover: hover) {
+  .botaoSecundario:hover:not(:disabled) {
+    color: var(--cor-primaria);
+  }
 }
 
 .botaoSecundario:disabled {
@@ -221,9 +225,11 @@
   justify-content: center;
 }
 
-.botaoCancelarGravacao:hover {
-  background: var(--cor-fundo);
-  color: var(--cor-perigo);
+@media (hover: hover) {
+  .botaoCancelarGravacao:hover {
+    background: var(--cor-fundo);
+    color: var(--cor-perigo);
+  }
 }
 
 .pontoGravando {
@@ -277,8 +283,10 @@
   user-select: none;
 }
 
-.botaoEnviar:hover:not(:disabled) {
-  background: var(--cor-primaria-hover);
+@media (hover: hover) {
+  .botaoEnviar:hover:not(:disabled) {
+    background: var(--cor-primaria-hover);
+  }
 }
 
 .botaoEnviar:disabled {
@@ -293,6 +301,8 @@
   text-underline-offset: 2px;
 }
 
-.linkManual:hover {
-  color: var(--cor-primaria);
+@media (hover: hover) {
+  .linkManual:hover {
+    color: var(--cor-primaria);
+  }
 }

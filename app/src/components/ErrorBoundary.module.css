@@ -46,6 +46,8 @@
   cursor: pointer;
 }
 
-.botao:hover {
-  background: var(--cor-primaria-hover);
+@media (hover: hover) {
+  .botao:hover {
+    background: var(--cor-primaria-hover);
+  }
 }

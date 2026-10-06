@@ -28,9 +28,11 @@
   transition: background-color var(--transicao), color var(--transicao);
 }
 
-.cabecalho button:hover {
-  background-color: var(--cor-fundo);
-  color: var(--cor-texto);
+@media (hover: hover) {
+  .cabecalho button:hover {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+  }
 }
 
 .grade {
@@ -58,8 +60,10 @@
   transition: background-color var(--transicao);
 }
 
-.dia:hover {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .dia:hover {
+    background-color: var(--cor-fundo);
+  }
 }
 
 .noIntervalo {

@@ -113,9 +113,11 @@
   color: inherit;
 }
 
-.link:hover {
-  background-color: var(--sb-hover);
-  color: var(--sb-texto-hover);
+@media (hover: hover) {
+  .link:hover {
+    background-color: var(--sb-hover);
+    color: var(--sb-texto-hover);
+  }
 }
 
 .link svg.iconeEntrada {
@@ -132,9 +134,11 @@
   font-weight: 600;
 }
 
-.linkAtivo:hover {
-  background: var(--sb-ativo-fundo);
-  color: #FFFFFF;
+@media (hover: hover) {
+  .linkAtivo:hover {
+    background: var(--sb-ativo-fundo);
+    color: #FFFFFF;
+  }
 }
 
 .rodape {
@@ -177,9 +181,11 @@
   transition: background-color var(--transicao), color var(--transicao);
 }
 
-.botaoSair:hover {
-  background-color: var(--sb-hover);
-  color: var(--sb-texto-hover);
+@media (hover: hover) {
+  .botaoSair:hover {
+    background-color: var(--sb-hover);
+    color: var(--sb-texto-hover);
+  }
 }
 
 .botaoSair svg {
@@ -200,9 +206,11 @@
   transition: background-color var(--transicao);
 }
 
-.botaoRecolher:hover {
-  background-color: var(--sb-hover);
-  color: var(--sb-texto-hover);
+@media (hover: hover) {
+  .botaoRecolher:hover {
+    background-color: var(--sb-hover);
+    color: var(--sb-texto-hover);
+  }
 }
 
 .botaoRecolher svg {

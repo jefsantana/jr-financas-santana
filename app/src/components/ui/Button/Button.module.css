@@ -25,9 +25,11 @@
   background-color: var(--cor-primaria);
   color: #FFFFFF;
 }
-.primario:hover:not(:disabled) {
-  background-color: var(--cor-primaria-hover);
-  box-shadow: var(--sombra);
+@media (hover: hover) {
+  .primario:hover:not(:disabled) {
+    background-color: var(--cor-primaria-hover);
+    box-shadow: var(--sombra);
+  }
 }
 
 .secundario {
@@ -35,25 +37,31 @@
   color: var(--cor-texto);
   border: 1px solid var(--cor-borda);
 }
-.secundario:hover:not(:disabled) {
-  background-color: var(--cor-fundo);
+@media (hover: hover) {
+  .secundario:hover:not(:disabled) {
+    background-color: var(--cor-fundo);
+  }
 }
 
 .perigo {
   background-color: var(--cor-perigo);
   color: #FFFFFF;
 }
-.perigo:hover:not(:disabled) {
-  opacity: 0.9;
+@media (hover: hover) {
+  .perigo:hover:not(:disabled) {
+    opacity: 0.9;
+  }
 }
 
 .fantasma {
   background-color: transparent;
   color: var(--cor-texto-secundario);
 }
-.fantasma:hover:not(:disabled) {
-  background-color: var(--cor-fundo);
-  color: var(--cor-texto);
+@media (hover: hover) {
+  .fantasma:hover:not(:disabled) {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+  }
 }
 
 .pequeno {
