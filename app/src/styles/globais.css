@@ -8,9 +8,34 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Sem rolagem/arrasto lateral da página. "clip" corta o excesso SEM virar
+     contêiner de rolagem (ao contrário de "hidden"), então elementos
+     "position: fixed", como o menu de baixo, continuam grudados na tela. */
+  overflow-x: hidden;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
+@supports (overflow: clip) {
+  html {
+    overflow-x: clip;
+  }
+}
+
+/* Celular/tablet: o gesto de arrastar para os lados não move a página.
+   Tabelas e abas com rolagem própria (overflow-x: auto) continuam rolando
+   normalmente, porque o touch-action vale só até o contêiner de rolagem. */
+@media (max-width: 1024px) {
+  html,
+  body {
+    touch-action: pan-y pinch-zoom;
+  }
 }
 
 body {
+  overflow-x: clip;
+  max-width: 100%;
+  overscroll-behavior-x: none;
   background-color: var(--cor-fundo);
   color: var(--cor-texto);
   font-family: var(--fonte-corpo);
