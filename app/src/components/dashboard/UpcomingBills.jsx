@@ -36,6 +36,7 @@ export function UpcomingBills({ vencimentos, aoPagar, pagando }) {
               </p>
               <p className={styles.info}>
                 {status.texto} · {formatarMoeda(item.valor)}
+                {item.cartao && item.tipo !== 'fatura' ? ` · no cartão ${item.cartao}` : ''}
               </p>
             </div>
             <div className={styles.acoes}>
@@ -45,7 +46,7 @@ export function UpcomingBills({ vencimentos, aoPagar, pagando }) {
                 disabled={pagando === item.id}
                 onClick={() => setParaPagar(item)}
               >
-                {pagando === item.id ? '...' : 'Pagar'}
+                {pagando === item.id ? '...' : item.cartao && item.tipo !== 'fatura' ? 'Lançar na fatura' : 'Pagar'}
               </button>
             </div>
           </li>
@@ -56,13 +57,15 @@ export function UpcomingBills({ vencimentos, aoPagar, pagando }) {
         aberto={Boolean(paraPagar)}
         aoFechar={() => setParaPagar(null)}
         aoConfirmar={() => aoPagar(paraPagar, nomeExibicao(perfil, usuario).split(' ')[0])}
-        titulo="Confirmar pagamento"
+        titulo={paraPagar?.cartao && paraPagar?.tipo !== 'fatura' ? 'Lançar na fatura do cartão' : 'Confirmar pagamento'}
         mensagem={
-          paraPagar
-            ? `Confirma o pagamento de "${paraPagar.descricao}" no valor de ${formatarMoeda(paraPagar.valor)}? Isso vai debitar o valor do saldo.`
-            : ''
+          !paraPagar
+            ? ''
+            : paraPagar.cartao && paraPagar.tipo !== 'fatura'
+              ? `Lançar "${paraPagar.descricao}" (${formatarMoeda(paraPagar.valor)}) na fatura do cartão ${paraPagar.cartao}? O valor só sai do saldo quando você pagar a fatura.`
+              : `Confirma o pagamento de "${paraPagar.descricao}" no valor de ${formatarMoeda(paraPagar.valor)}? Isso vai debitar o valor do saldo.`
         }
-        textoConfirmar="Confirmar pagamento"
+        textoConfirmar={paraPagar?.cartao && paraPagar?.tipo !== 'fatura' ? 'Lançar na fatura' : 'Confirmar pagamento'}
         variantePerigo={false}
       />
     </ul>

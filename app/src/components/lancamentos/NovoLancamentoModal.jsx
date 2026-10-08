@@ -6,6 +6,7 @@ import { SeletorPessoa } from './SeletorPessoa.jsx';
 import { useCrudMock } from '../../hooks/useCrudMock.js';
 import { criar } from '../../services/dados.js';
 import { criarCompraNoCartao } from '../../utils/comprasCartao.js';
+import { valorDaParcela } from '../../utils/financeiro.js';
 import { parseValorMonetario, mascaraMoeda, nomeExibicao, dataLocalDeHoje } from '../../utils/formatadores.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
@@ -29,6 +30,7 @@ export function NovoLancamentoModal({ aberto, aoFechar }) {
   const { perfil, usuario, pessoas } = useAuth();
   const [campos, setCampos] = useState(() => estadoInicial(pessoas));
   const [parcelado, setParcelado] = useState(false);
+  const [recorrente, setRecorrente] = useState(false);
   const [numeroParcelas, setNumeroParcelas] = useState('2');
   const [salvando, setSalvando] = useState(false);
   const { registros: cartoes } = useCrudMock('Cartoes');
@@ -41,6 +43,7 @@ export function NovoLancamentoModal({ aberto, aoFechar }) {
       setTipo('gasto');
       setCampos(estadoInicial(pessoas));
       setParcelado(false);
+      setRecorrente(false);
       setNumeroParcelas('2');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,9 +73,12 @@ export function NovoLancamentoModal({ aberto, aoFechar }) {
       toast.erro('Escolha uma categoria.');
       return;
     }
-    if (tipo === 'gasto' && parcelado && Number(numeroParcelas) < 2) {
-      toast.erro('Informe pelo menos 2 parcelas.');
-      return;
+    if (tipo === 'gasto' && parcelado) {
+      const n = Number(numeroParcelas);
+      if (!Number.isInteger(n) || n < 2 || n > 120) {
+        toast.erro('Informe um número de parcelas entre 2 e 120. Para cobrança mensal sem fim, use "Assinatura".');
+        return;
+      }
     }
 
     const familiaId = perfil?.familia_id;
@@ -90,10 +96,24 @@ export function NovoLancamentoModal({ aberto, aoFechar }) {
           },
           familiaId
         );
+      } else if (tipo === 'gasto' && recorrente) {
+        // Assinatura / cobrança mensal sem fim: vira Conta Fixa (com o cartão,
+        // se houver) e aparece nos Próximos Vencimentos todo mês.
+        await criar(
+          'ContasFixas',
+          {
+            descricao: campos.descricao,
+            valor: parseValorMonetario(campos.valor),
+            diaVencimento: Number(campos.data.split('-')[2]),
+            categoria: campos.categoria,
+            cartao: campos.cartao,
+          },
+          familiaId
+        );
       } else if (tipo === 'gasto' && parcelado) {
         const valorTotal = parseValorMonetario(campos.valor);
         const totalParcelas = Number(numeroParcelas);
-        const valorParcela = valorTotal / totalParcelas;
+        const valorParcela = valorDaParcela(valorTotal, totalParcelas, 1);
         const pessoa = nomeExibicao(perfil, usuario).split(' ')[0];
         const [ano, mes] = campos.data.split('-');
 
@@ -177,8 +197,12 @@ export function NovoLancamentoModal({ aberto, aoFechar }) {
         );
       }
       toast.sucesso(
-        tipo === 'gasto' && parcelado
-          ? 'Compra parcelada lançada: 1ª parcela já entrou no seu gasto de hoje'
+        tipo === 'gasto' && recorrente
+          ? 'Assinatura cadastrada em Contas Fixas'
+          : tipo === 'gasto' && parcelado
+          ? campos.cartao
+            ? 'Compra parcelada lançada: 1ª parcela já está na fatura do cartão'
+            : 'Compra parcelada lançada: 1ª parcela já entrou no seu gasto de hoje'
           : tipo === 'gasto' && campos.cartao
             ? 'Compra lançada na fatura do cartão'
             : 'Lançamento salvo com sucesso'
@@ -285,15 +309,40 @@ export function NovoLancamentoModal({ aberto, aoFechar }) {
         {tipo === 'gasto' && (
           <div className={styles.parcelamento}>
             <label className={styles.checkboxParcelar}>
-              <input type="checkbox" checked={parcelado} onChange={(e) => setParcelado(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={parcelado}
+                onChange={(e) => {
+                  setParcelado(e.target.checked);
+                  if (e.target.checked) setRecorrente(false);
+                }}
+              />
               Parcelar essa compra
             </label>
+            <label className={styles.checkboxParcelar}>
+              <input
+                type="checkbox"
+                checked={recorrente}
+                onChange={(e) => {
+                  setRecorrente(e.target.checked);
+                  if (e.target.checked) setParcelado(false);
+                }}
+              />
+              Assinatura / cobrança mensal (sem data para acabar)
+            </label>
+            {recorrente && (
+              <span className={styles.valorParcela}>
+                Vai para Contas Fixas, vencendo todo dia {campos.data ? Number(campos.data.split('-')[2]) : '—'}. Você lança
+                na fatura (ou paga) pelo Dashboard.
+              </span>
+            )}
             {parcelado && (
               <>
                 <Input
                   rotulo="Número de parcelas"
                   type="number"
                   min="2"
+                  max="120"
                   required
                   value={numeroParcelas}
                   onChange={(e) => setNumeroParcelas(e.target.value)}

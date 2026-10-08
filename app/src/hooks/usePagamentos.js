@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
-import { criar, atualizar } from '../services/dados.js';
+import { criar, atualizar, listar, pagarFatura } from '../services/dados.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
 import { dataLocalDeHoje } from '../utils/formatadores.js';
+import { dataDaCobranca } from '../utils/financeiro.js';
+import { criarCompraNoCartao } from '../utils/comprasCartao.js';
 
 export function usePagamentos(aoConcluir) {
   const { perfil } = useAuth();
@@ -15,32 +17,30 @@ export function usePagamentos(aoConcluir) {
       setPagando(item.id);
       try {
         if (item.tipo === 'fatura') {
-          // Uma fatura junta várias compras pendentes do mesmo cartão: cada
-          // uma vira o próprio Gasto (mantendo descrição/categoria originais)
-          // e é marcada como paga, só na data em que a fatura é quitada.
-          for (const compra of item.itens) {
-            await criar(
-              'Gastos',
-              {
-                descricao: compra.descricao,
-                valor: Number(compra.valor),
-                data: dataLocalDeHoje(),
-                categoria: compra.categoria || 'Cartão de Crédito',
-                cartao: compra.cartao || '',
-                pessoa,
-              },
-              familiaId
-            );
-            await atualizar('ComprasCartao', compra.id, { paga: true });
-          }
+          // Pagar a fatura roda numa única transação no banco: cada compra
+          // pendente vira Gasto (com a pessoa que fez a compra) e é marcada
+          // como paga — ou tudo acontece, ou nada.
+          await pagarFatura(item.cartao, item.mesFatura, pessoa);
+        } else if (item.cartao) {
+          // Assinatura (conta fixa) ou parcela cobrada num cartão: não sai do
+          // saldo agora, entra pendente na fatura do cartão — igual a
+          // qualquer outra compra no crédito. O dinheiro só sai do saldo
+          // quando a fatura for paga.
+          const cartoes = await listar('Cartoes');
+          const ehParcela = item.tipo === 'parcelamento';
+          await criarCompraNoCartao({
+            descricao: ehParcela ? `${item.descricaoBase} (${item.parcelaAtual}/${item.numeroParcelas})` : item.descricao,
+            valor: item.valor,
+            data: dataDaCobranca(item.mesAno, item.diaVencimento),
+            categoria: item.categoria || 'Cartão de Crédito',
+            cartao: item.cartao,
+            pessoa,
+            familiaId,
+            cartoes,
+          });
+          await registrarBaixa(item, pessoa, familiaId);
         } else {
-          if (item.tipo === 'contaFixa') {
-            await criar('PagamentosContasFixas', { contaFixaId: item.id, mesAno: item.mesAno, pessoa }, familiaId);
-          } else {
-            await criar('PagamentosParcelamentos', { parcelamentoId: item.id, mesAno: item.mesAno, pessoa }, familiaId);
-            await atualizar('Parcelamentos', item.id, { parcelaAtual: item.parcelaAtual + 1 });
-          }
-
+          await registrarBaixa(item, pessoa, familiaId);
           await criar(
             'Gastos',
             {
@@ -48,7 +48,7 @@ export function usePagamentos(aoConcluir) {
               valor: item.valor,
               data: dataLocalDeHoje(),
               categoria: item.categoria || 'Cartão de Crédito',
-              cartao: item.cartao || '',
+              cartao: '',
               pessoa,
             },
             familiaId
@@ -66,4 +66,15 @@ export function usePagamentos(aoConcluir) {
   );
 
   return { pagar, pagando };
+}
+
+// Marca a conta fixa / parcela como resolvida neste mês (some dos
+// "Próximos Vencimentos") e, no caso de parcela, avança a parcela atual.
+async function registrarBaixa(item, pessoa, familiaId) {
+  if (item.tipo === 'contaFixa') {
+    await criar('PagamentosContasFixas', { contaFixaId: item.id, mesAno: item.mesAno, pessoa }, familiaId);
+  } else {
+    await criar('PagamentosParcelamentos', { parcelamentoId: item.id, mesAno: item.mesAno, pessoa }, familiaId);
+    await atualizar('Parcelamentos', item.id, { parcelaAtual: item.parcelaAtual + 1 });
+  }
 }

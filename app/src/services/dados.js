@@ -84,6 +84,18 @@ export async function excluirPermanente(tabela, id) {
   if (error) throw error;
 }
 
+// Paga uma fatura inteira numa única transação no banco (função
+// `pagar_fatura`): vira Gasto + marca como paga, tudo ou nada.
+export async function pagarFatura(cartao, mesFatura, pessoa) {
+  const { data, error } = await supabase.rpc('pagar_fatura', {
+    p_cartao: cartao,
+    p_mes_fatura: mesFatura,
+    p_pessoa: pessoa,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function registrarAcesso({ perfilId, navegador, sistema, dispositivo }) {
   const { error } = await supabase
     .from('historico_acessos')

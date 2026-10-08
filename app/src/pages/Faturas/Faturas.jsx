@@ -2,14 +2,15 @@ import { Receipt, Layers, ShoppingBag } from 'lucide-react';
 import { Card, Badge, EmptyState, Loading, InfoBanner } from '../../components/ui/index.js';
 import { useCrudMock } from '../../hooks/useCrudMock.js';
 import { formatarMoeda } from '../../utils/formatadores.js';
-import { agruparComprasPorFatura, nomeDoMes } from '../../utils/financeiro.js';
+import { agruparComprasPorFatura, calcularUsoDoLimite, nomeDoMes } from '../../utils/financeiro.js';
 import formStyles from '../_shared/CrudPage.module.css';
 import styles from './Faturas.module.css';
 
 export default function Faturas() {
   const { registros: cartoes, carregando: c1 } = useCrudMock('Cartoes');
   const { registros: comprasCartao, carregando: c2 } = useCrudMock('ComprasCartao');
-  const carregando = c1 || c2;
+  const { registros: parcelamentos, carregando: c3 } = useCrudMock('Parcelamentos');
+  const carregando = c1 || c2 || c3;
 
   if (carregando) return <Loading texto="Carregando faturas..." />;
 
@@ -37,10 +38,18 @@ export default function Faturas() {
 
       {cartoes.map((cartao) => {
         const faturas = agruparComprasPorFatura(comprasCartao.filter((c) => c.cartao === cartao.nome));
+        const uso = calcularUsoDoLimite(cartao, comprasCartao, parcelamentos);
 
         return (
           <section key={cartao.id} className={styles.secaoCartao}>
             <h3 className={styles.tituloCartao}>{cartao.nome}</h3>
+            {uso.limite > 0 && (
+              <p className={styles.semCompras}>
+                Limite {formatarMoeda(uso.limite)} · usado {formatarMoeda(uso.usado)} ({formatarMoeda(uso.emFatura)} em
+                fatura + {formatarMoeda(uso.parcelasFuturas)} em parcelas futuras) ·{' '}
+                {uso.estourou ? `estourou ${formatarMoeda(-uso.disponivel)}` : `${formatarMoeda(uso.disponivel)} livre`}
+              </p>
+            )}
 
             {faturas.length === 0 ? (
               <p className={styles.semCompras}>Nenhuma compra registrada neste cartão ainda.</p>

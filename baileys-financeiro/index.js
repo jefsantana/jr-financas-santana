@@ -860,7 +860,7 @@ async function salvarContaFixa(dados) {
 async function salvarPagamentoContaFixa(dados) {
   const { data: contas, error: erroBusca } = await supabase
     .from('contas_fixas')
-    .select('id, descricao, valor, dia_vencimento, categoria')
+    .select('id, descricao, valor, dia_vencimento, categoria, cartao')
     .eq('familia_id', FAMILIA_ID)
     .is('excluido_em', null);
   if (erroBusca) throw new Error(`Supabase select (contas_fixas): ${erroBusca.message}`);
@@ -895,6 +895,31 @@ async function salvarPagamentoContaFixa(dados) {
     pessoa: dados.pessoa || null,
   });
   if (erroInsert) throw new Error(`Supabase insert (pagamentos_contas_fixas): ${erroInsert.message}`);
+
+  // Igual ao Dashboard do app: pagar uma conta fixa também gera o lançamento.
+  // Cobrada num cartão -> entra pendente na fatura do cartão; senão vira Gasto
+  // de hoje (antes só o "pagamento" era registrado e o saldo não mudava).
+  if (alvo.cartao) {
+    await salvarCompraCartao({
+      descricao: alvo.descricao,
+      valor: Number(alvo.valor),
+      categoria: alvo.categoria,
+      cartao: alvo.cartao,
+      pessoa: dados.pessoa,
+      data: vencimento.toFormat('yyyy-MM-dd'),
+    });
+  } else {
+    const { error: erroGasto } = await supabase.from('gastos').insert({
+      familia_id: FAMILIA_ID,
+      descricao: alvo.descricao,
+      valor: Number(alvo.valor),
+      data: DateTime.now().setZone(FUSO_HORARIO).toFormat('yyyy-MM-dd'),
+      categoria: alvo.categoria || null,
+      cartao: '',
+      pessoa: dados.pessoa || null,
+    });
+    if (erroGasto) throw new Error(`Supabase insert (gastos): ${erroGasto.message}`);
+  }
 
   return { conta: alvo, vencimento, jaEstavaPago: false };
 }

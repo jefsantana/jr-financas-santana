@@ -3,6 +3,7 @@ import CrudPage from '../_shared/CrudPage.jsx';
 import { ProgressBar } from '../../components/ui/index.js';
 import { useCrudMock } from '../../hooks/useCrudMock.js';
 import { formatarMoeda } from '../../utils/formatadores.js';
+import { valorDaParcela } from '../../utils/financeiro.js';
 import { CategoriaComIcone } from '../../components/lancamentos/CategoriaComIcone.jsx';
 import { useCategorias } from '../../contexts/CategoriasContext.jsx';
 
@@ -17,8 +18,14 @@ export default function Parcelamentos() {
     tituloForm: 'Novo Parcelamento',
     tituloLista: 'Parcelamentos cadastrados',
     textoVazioLista: 'Cadastre o primeiro parcelamento usando o formulário acima.',
-    dica: 'Use para uma compra dividida em várias vezes, geralmente no cartão de crédito (ex: um notebook em 10x). Uma conta que se repete todo mês com o mesmo valor, como aluguel ou internet, vai em "Contas Fixas". Se a máquina cobrou juros pra parcelar, preencha "Valor original" com o preço à vista — assim o sistema mostra separado quanto foi de juros.',
+    dica: 'Use para uma compra dividida em várias vezes, geralmente no cartão de crédito (ex: um notebook em 10x). Uma conta ou assinatura que se repete todo mês sem data para acabar (aluguel, internet, Netflix, Claude) vai em "Contas Fixas" — ali você também pode escolher o cartão. Se escolher um cartão aqui, cada parcela é lançada na fatura dele pelo Dashboard. Se a máquina cobrou juros pra parcelar, preencha "Valor original" com o preço à vista — assim o sistema mostra separado quanto foi de juros.',
     validar: (dados) => {
+      if (!Number.isInteger(dados.numeroParcelas) || dados.numeroParcelas < 2 || dados.numeroParcelas > 120) {
+        return 'O "Nº de parcelas" deve ser um número inteiro entre 2 e 120. Para cobrança mensal sem fim (assinatura), use "Contas Fixas".';
+      }
+      if (!Number.isInteger(dados.parcelaAtual) || dados.parcelaAtual < 1) {
+        return 'A "Parcela atual" deve ser um número inteiro a partir de 1.';
+      }
       if (Number(dados.parcelaAtual) > Number(dados.numeroParcelas)) {
         return 'A "Parcela atual" não pode ser maior que o "Nº de parcelas".';
       }
@@ -36,7 +43,7 @@ export default function Parcelamentos() {
         placeholder: 'Deixe em branco se não teve juros',
       },
       { nome: 'valorTotal', rotulo: 'Valor total parcelado (R$)', tipo: 'moeda', obrigatorio: true },
-      { nome: 'numeroParcelas', rotulo: 'Nº de parcelas', tipo: 'numero', obrigatorio: true, min: 1 },
+      { nome: 'numeroParcelas', rotulo: 'Nº de parcelas', tipo: 'numero', obrigatorio: true, min: 2, max: 120 },
       { nome: 'parcelaAtual', rotulo: 'Parcela atual', tipo: 'numero', obrigatorio: true, min: 1 },
       { nome: 'diaVencimento', rotulo: 'Dia do vencimento', tipo: 'numero', obrigatorio: true, min: 1, max: 31 },
       { nome: 'cartao', rotulo: 'Cartão (opcional)', tipo: 'select', opcoes: nomesCartoes },
@@ -71,9 +78,9 @@ export default function Parcelamentos() {
         render: (r) => {
           const numeroParcelas = Number(r.numeroParcelas);
           const parcelaAtual = Number(r.parcelaAtual);
-          const valorParcela = Number(r.valorTotal) / numeroParcelas;
+          const valorParcela = valorDaParcela(r.valorTotal, numeroParcelas, 1);
           const parcelasRestantes = Math.max(0, numeroParcelas - parcelaAtual + 1);
-          const saldoDevedor = valorParcela * parcelasRestantes;
+          const saldoDevedor = Math.max(0, Number(r.valorTotal) - valorParcela * (numeroParcelas - parcelasRestantes));
           const percentual = Math.min(100, Math.round((parcelaAtual / numeroParcelas) * 100));
           return (
             <div style={{ minWidth: 140 }}>

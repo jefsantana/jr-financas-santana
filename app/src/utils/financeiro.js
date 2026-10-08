@@ -48,6 +48,59 @@ export function calcularTendencia(atual, anterior, inverter = false) {
   return { percentual: Math.abs(percentual), subiu, bom };
 }
 
+/**
+ * Data (AAAA-MM-DD) em que uma cobrança do mês `mesAno` cai, dado o dia de
+ * vencimento — limitado ao último dia do mês (dia 31 em fevereiro vira 28).
+ * Usada pra decidir em qual fatura uma assinatura/parcela entra.
+ */
+export function dataDaCobranca(mesAno, dia) {
+  const [ano, mes] = mesAno.split('-').map(Number);
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  const diaAjustado = Math.min(Number(dia) || 1, ultimoDia);
+  return `${ano}-${String(mes).padStart(2, '0')}-${String(diaAjustado).padStart(2, '0')}`;
+}
+
+/**
+ * Valor de uma parcela, em centavos exatos: as parcelas são iguais
+ * (arredondadas) e a diferença de centavos fica na última, pra soma
+ * das parcelas bater sempre com o valor total.
+ */
+export function valorDaParcela(valorTotal, numeroParcelas, parcela) {
+  const total = Number(valorTotal);
+  const n = Number(numeroParcelas);
+  const base = Math.round((total / n) * 100) / 100;
+  if (Number(parcela) < n) return base;
+  return Math.round((total - base * (n - 1)) * 100) / 100;
+}
+
+/**
+ * Quanto do limite do cartão está comprometido: compras ainda não pagas
+ * nas faturas + parcelas futuras dos parcelamentos feitos nesse cartão
+ * (as parcelas que ainda não chegaram na fatura).
+ */
+export function calcularUsoDoLimite(cartao, comprasCartao, parcelamentos) {
+  const limite = Number(cartao.limite) || 0;
+  const emFatura = comprasCartao
+    .filter((c) => c.cartao === cartao.nome && !c.paga)
+    .reduce((soma, c) => soma + Number(c.valor), 0);
+  const parcelasFuturas = parcelamentos
+    .filter((p) => p.cartao === cartao.nome && Number(p.parcelaAtual) <= Number(p.numeroParcelas))
+    .reduce((soma, p) => {
+      const restantes = Number(p.numeroParcelas) - Number(p.parcelaAtual) + 1;
+      return soma + (Number(p.valorTotal) / Number(p.numeroParcelas)) * restantes;
+    }, 0);
+  const usado = Math.round((emFatura + parcelasFuturas) * 100) / 100;
+  return {
+    limite,
+    emFatura,
+    parcelasFuturas,
+    usado,
+    disponivel: limite - usado,
+    percentual: limite > 0 ? Math.min(100, Math.round((usado / limite) * 100)) : 0,
+    estourou: limite > 0 && usado > limite,
+  };
+}
+
 export function calcularAlertasContasFixas(contasFixas, pagamentos) {
   const mesAnoAtual = mesAnoDe(new Date());
   const idsPagos = pagamentos
@@ -62,7 +115,8 @@ export function calcularAlertasContasFixas(contasFixas, pagamentos) {
       descricao: c.descricao,
       valor: Number(c.valor),
       categoria: c.categoria,
-      cartao: '',
+      cartao: c.cartao || '',
+      diaVencimento: Number(c.diaVencimento),
       mesAno: mesAnoAtual,
       diasRestantes: diasAteVencimento(c.diaVencimento)
     }));
@@ -109,7 +163,7 @@ export function calcularAlertasParcelamentos(parcelamentos, pagamentosParcelamen
     .filter(p => Number(p.parcelaAtual) <= Number(p.numeroParcelas))
     .filter(p => !idsPagos.includes(String(p.id)))
     .map(p => {
-      const valorParcela = Number(p.valorTotal) / Number(p.numeroParcelas);
+      const valorParcela = valorDaParcela(p.valorTotal, p.numeroParcelas, p.parcelaAtual);
       const ehPrimeiraParcela = Number(p.parcelaAtual) === 1;
       const diasRestantes =
         ehPrimeiraParcela && p.criadoEm
@@ -119,6 +173,9 @@ export function calcularAlertasParcelamentos(parcelamentos, pagamentosParcelamen
         tipo: 'parcelamento',
         id: p.id,
         descricao: `${p.descricao} (parcela ${p.parcelaAtual}/${p.numeroParcelas})`,
+        descricaoBase: p.descricao,
+        numeroParcelas: Number(p.numeroParcelas),
+        diaVencimento: Number(p.diaVencimento) || 1,
         valor: valorParcela,
         categoria: p.categoria || 'Cartão de Crédito',
         cartao: p.cartao || '',
