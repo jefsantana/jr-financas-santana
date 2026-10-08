@@ -3,6 +3,8 @@
   flex-direction: column;
   gap: var(--espaco-sm);
   min-width: 0;
+  /* o tamanho do valor acompanha a largura do próprio card (ver .valor) */
+  container-type: inline-size;
 }
 
 .destaque {
@@ -79,10 +81,13 @@
 
 .valor {
   font-family: var(--fonte-numeros);
-  font-size: 1.55rem;
+  /* O valor nunca quebra em duas linhas: a fonte encolhe junto com o card
+     (11% da largura dele), entre 0.85rem e 1.55rem. */
+  font-size: 1.3rem;
+  font-size: clamp(0.85rem, 11cqi, 1.55rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  word-break: break-word;
+  white-space: nowrap;
   line-height: 1.2;
 }
 
@@ -104,20 +109,3 @@
 .tendenciaNeutra { color: var(--cor-texto-secundario); font-weight: 500; }
 .tendenciaDestaque { color: rgba(255, 255, 255, 0.85); font-weight: 500; }
 
-@media (max-width: 1024px) {
-  .valor {
-    font-size: 1.3rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .valor {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 380px) {
-  .valor {
-    font-size: 1.35rem;
-  }
-}

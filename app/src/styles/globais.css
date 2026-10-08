@@ -105,6 +105,8 @@ svg {
   font-family: var(--fonte-numeros);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  /* valores em dinheiro nunca quebram em duas linhas ("R$ 1.059," / "07") */
+  white-space: nowrap;
 }
 
 .valor-positivo {
