@@ -16,6 +16,7 @@ import {
   TrendingDown,
   UtensilsCrossed,
   CreditCard,
+  FileText,
 } from 'lucide-react';
 import { Loading, EmptyState, Button, Avatar } from '../../components/ui/index.js';
 import { Panel } from '../../components/dashboard/Panel.jsx';
@@ -27,6 +28,7 @@ import { GoalsWidget } from '../../components/dashboard/GoalsWidget.jsx';
 import { BudgetsWidget } from '../../components/dashboard/BudgetsWidget.jsx';
 import { MealCardWidget } from '../../components/dashboard/MealCardWidget.jsx';
 import { CreditCardsWidget } from '../../components/dashboard/CreditCardsWidget.jsx';
+import { FixedBillsWidget } from '../../components/dashboard/FixedBillsWidget.jsx';
 import { FinancialInsights } from '../../components/dashboard/FinancialInsights.jsx';
 import { CalendarioIntervalo } from '../../components/dashboard/CalendarioIntervalo.jsx';
 import { GraficoLinha } from '../../components/charts/GraficoLinha.jsx';
@@ -44,6 +46,7 @@ import {
   calcularAlertasFaturas,
   comprasCartaoComoGastos,
   resumirCartoes,
+  calcularResumoContasFixas,
   agruparPorCategoria,
   agruparPorPessoa,
   calcularTendencia,
@@ -255,6 +258,12 @@ export default function Dashboard() {
     ...gastosAlimentacaoFiltrados,
   ]);
   const resumoCartoes = resumirCartoes(cartoes, comprasCartao, parcelamentos);
+
+  // Contas fixas do mês que está na tela (ou o mês atual, se o período for um
+  // intervalo personalizado). Recalcula a cada pagamento, pois o Dashboard
+  // recarrega os dados depois de pagar.
+  const mesContasFixas = intervaloPersonalizado ? hoje : dataReferencia;
+  const resumoContasFixas = calcularResumoContasFixas(contasFixas, pagamentos, mesAnoDe(mesContasFixas));
   const gastosMesTodos = gastosCompetenciaTodos.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
   const gastosAlimentacaoMesTodos = gastosAlimentacao.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
   const pessoasGasto = agruparPorPessoa([...gastosMesTodos, ...gastosAlimentacaoMesTodos]);
@@ -391,21 +400,29 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className={styles.itemCartoes}>
-          <Panel
-            icone={CreditCard}
-            titulo="Cartões de Crédito"
-            subtitulo="faturas e limite"
-            acao={
-              <Link to="/faturas">
-                <Button tamanho="pequeno" variante="secundario">
-                  Ver faturas
-                </Button>
-              </Link>
-            }
-          >
-            <CreditCardsWidget resumos={resumoCartoes} />
-          </Panel>
+        <div className={`${styles.grade} ${styles.grupo}`}>
+          <div className={styles.itemContasFixas}>
+            <Panel icone={FileText} titulo="Contas Fixas do Mês" subtitulo={nomeMesCapitalizado(mesContasFixas)}>
+              <FixedBillsWidget resumo={resumoContasFixas} />
+            </Panel>
+          </div>
+
+          <div className={styles.itemCartoes}>
+            <Panel
+              icone={CreditCard}
+              titulo="Cartões de Crédito"
+              subtitulo="faturas e limite"
+              acao={
+                <Link to="/faturas">
+                  <Button tamanho="pequeno" variante="secundario">
+                    Ver faturas
+                  </Button>
+                </Link>
+              }
+            >
+              <CreditCardsWidget resumos={resumoCartoes} />
+            </Panel>
+          </div>
         </div>
 
         <div className={styles.itemInsights}>

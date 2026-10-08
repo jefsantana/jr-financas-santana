@@ -172,6 +172,31 @@ export function calcularAlertasContasFixas(contasFixas, pagamentos) {
 }
 
 /**
+ * Resumo das contas fixas de um mês: total, quanto já foi pago (ou lançado na
+ * fatura do cartão) e quanto falta. "Pago" = existe pagamento registrado pra
+ * conta naquele mês — o mesmo registro que tira a conta dos Próximos
+ * Vencimentos, então os dois sempre andam juntos.
+ */
+export function calcularResumoContasFixas(contasFixas, pagamentos, mesAno) {
+  const idsPagos = new Set(
+    pagamentos.filter((p) => normalizarMesAno(p.mesAno) === mesAno).map((p) => String(p.contaFixaId))
+  );
+  const pagas = contasFixas.filter((c) => idsPagos.has(String(c.id)));
+  const pendentes = contasFixas.filter((c) => !idsPagos.has(String(c.id)));
+  const total = somar(contasFixas);
+  const valorPago = somar(pagas);
+  return {
+    quantidade: contasFixas.length,
+    quantidadePagas: pagas.length,
+    total,
+    valorPago,
+    valorPendente: total - valorPago,
+    percentual: total > 0 ? Math.round((valorPago / total) * 100) : 0,
+    pendentes,
+  };
+}
+
+/**
  * Vencimento da 1ª parcela (a que ainda nunca foi paga): calculado a
  * partir da data em que o parcelamento foi cadastrado, não do dia de
  * hoje — se o dia de vencimento já tinha passado nessa data, a 1ª

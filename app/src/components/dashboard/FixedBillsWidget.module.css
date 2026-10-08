@@ -1,0 +1,55 @@
+.total {
+  font-family: var(--fonte-numeros);
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-bottom: 0.6rem;
+}
+
+.total span {
+  font-family: var(--fonte-corpo);
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: normal;
+  color: var(--cor-texto-secundario);
+}
+
+.progresso {
+  margin: 0.4rem 0 0.9rem;
+  font-size: 0.8rem;
+  color: var(--cor-texto-secundario);
+}
+
+.linhas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-md);
+  margin-bottom: 0.9rem;
+}
+
+.linhas dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+  color: var(--cor-texto-secundario);
+}
+
+.linhas dd {
+  font-size: 1.05rem;
+}
+
+.nota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--cor-texto-secundario);
+}
+
+.nota a {
+  color: var(--cor-primaria);
+  font-weight: 600;
+}

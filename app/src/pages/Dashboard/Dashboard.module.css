@@ -250,11 +250,12 @@
   .itemGrafico { order: 1; }
   .itemCategoria { order: 2; }
   .itemVencimentos { order: 3; }
-  .itemCartoes { order: 4; }
-  .itemMetas { order: 5; }
-  .itemUltimos { order: 6; }
-  .itemPessoa { order: 7; }
-  .itemInsights { order: 8; }
-  .itemAlimentacao { order: 9; }
-  .itemOrcamento { order: 10; }
+  .itemContasFixas { order: 4; }
+  .itemCartoes { order: 5; }
+  .itemMetas { order: 6; }
+  .itemUltimos { order: 7; }
+  .itemPessoa { order: 8; }
+  .itemInsights { order: 9; }
+  .itemAlimentacao { order: 10; }
+  .itemOrcamento { order: 11; }
 }
