@@ -15,6 +15,7 @@ import {
   TrendingUp,
   TrendingDown,
   UtensilsCrossed,
+  CreditCard,
 } from 'lucide-react';
 import { Loading, EmptyState, Button, Avatar } from '../../components/ui/index.js';
 import { Panel } from '../../components/dashboard/Panel.jsx';
@@ -25,6 +26,7 @@ import { SpendingByPerson } from '../../components/dashboard/SpendingByPerson.js
 import { GoalsWidget } from '../../components/dashboard/GoalsWidget.jsx';
 import { BudgetsWidget } from '../../components/dashboard/BudgetsWidget.jsx';
 import { MealCardWidget } from '../../components/dashboard/MealCardWidget.jsx';
+import { CreditCardsWidget } from '../../components/dashboard/CreditCardsWidget.jsx';
 import { FinancialInsights } from '../../components/dashboard/FinancialInsights.jsx';
 import { CalendarioIntervalo } from '../../components/dashboard/CalendarioIntervalo.jsx';
 import { GraficoLinha } from '../../components/charts/GraficoLinha.jsx';
@@ -40,6 +42,8 @@ import {
   calcularAlertasContasFixas,
   calcularAlertasParcelamentos,
   calcularAlertasFaturas,
+  comprasCartaoComoGastos,
+  resumirCartoes,
   agruparPorCategoria,
   agruparPorPessoa,
   calcularTendencia,
@@ -200,6 +204,22 @@ export default function Dashboard() {
   const gastosAlimentacao = mapearGastosAlimentacao(movimentosCartaoAlimentacao, cartoesAlimentacao);
   const gastosAlimentacaoFiltrados = gastosAlimentacao.filter(porPessoa);
 
+  // Compras no cartão de crédito entram nas categorias, em "Gastos por Pessoa",
+  // nos últimos lançamentos e no orçamento pela DATA DA COMPRA (o gasto aparece
+  // no mês em que foi feito). Já o Saldo e os totais de Entradas/Gastos do mês
+  // seguem o caixa: o dinheiro só sai quando a fatura é paga. O Gasto gerado ao
+  // pagar a fatura é ignorado aqui (compraCartaoId) pra não contar duas vezes.
+  const comprasComoGastos = comprasCartaoComoGastos(comprasCartao);
+  const gastosCompetenciaFiltrados = [
+    ...gastosFiltrados.filter((g) => !g.compraCartaoId),
+    ...comprasComoGastos.filter(porPessoa),
+  ];
+  const gastosCompetenciaTodos = [...gastos.filter((g) => !g.compraCartaoId), ...comprasComoGastos];
+  const noPeriodo = (g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva;
+  const noPeriodoAnterior = (g) => g.data >= dataInicioAnterior && g.data <= dataFimAnterior;
+  const gastosCompetenciaMes = gastosCompetenciaFiltrados.filter(noPeriodo);
+  const gastosCompetenciaMesAnterior = gastosCompetenciaFiltrados.filter(noPeriodoAnterior);
+
   const entradasMes = entradasFiltradas.filter((e) => e.data >= dataInicioEfetiva && e.data <= dataFimEfetiva);
   const gastosMes = gastosFiltrados.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
   const gastosAlimentacaoMes = gastosAlimentacaoFiltrados.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
@@ -224,14 +244,18 @@ export default function Dashboard() {
   const alertasFaturas = calcularAlertasFaturas(comprasCartao, cartoes);
   const vencimentos = [...alertasContas, ...alertasParcelas, ...alertasFaturas].sort((a, b) => a.diasRestantes - b.diasRestantes);
 
-  const categoriasMes = agruparPorCategoria([...gastosMes, ...gastosAlimentacaoMes]);
-  const categoriasMesAnterior = agruparPorCategoria([...gastosMesAnterior, ...gastosAlimentacaoMesAnterior]);
+  const categoriasMes = agruparPorCategoria([...gastosCompetenciaMes, ...gastosAlimentacaoMes]);
+  const categoriasMesAnterior = agruparPorCategoria([...gastosCompetenciaMesAnterior, ...gastosAlimentacaoMesAnterior]);
   const gastosPorCategoriaMapa = Object.fromEntries(
-    agruparPorCategoria([...gastosMes, ...gastosAlimentacaoMes], 999).map((c) => [c.label, c.valor])
+    agruparPorCategoria([...gastosCompetenciaMes, ...gastosAlimentacaoMes], 999).map((c) => [c.label, c.valor])
   );
   const resumoMensal = calcularResumoMensal(entradasFiltradas, gastosFiltrados);
-  const ultimosLancamentos = montarUltimosLancamentos(entradasFiltradas, [...gastosFiltrados, ...gastosAlimentacaoFiltrados]);
-  const gastosMesTodos = gastos.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
+  const ultimosLancamentos = montarUltimosLancamentos(entradasFiltradas, [
+    ...gastosCompetenciaFiltrados,
+    ...gastosAlimentacaoFiltrados,
+  ]);
+  const resumoCartoes = resumirCartoes(cartoes, comprasCartao, parcelamentos);
+  const gastosMesTodos = gastosCompetenciaTodos.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
   const gastosAlimentacaoMesTodos = gastosAlimentacao.filter((g) => g.data >= dataInicioEfetiva && g.data <= dataFimEfetiva);
   const pessoasGasto = agruparPorPessoa([...gastosMesTodos, ...gastosAlimentacaoMesTodos]);
 
@@ -347,7 +371,7 @@ export default function Dashboard() {
           </div>
 
           <div className={styles.itemCategoria}>
-            <Panel icone={PieChart} titulo="Gastos por Categoria" subtitulo={subtituloMes}>
+            <Panel icone={PieChart} titulo="Gastos por Categoria" subtitulo={`${subtituloMes} · inclui compras no cartão`}>
               <GraficoDonut dados={categoriasMes} />
             </Panel>
           </div>
@@ -365,6 +389,23 @@ export default function Dashboard() {
               <UpcomingBills vencimentos={vencimentos} aoPagar={pagar} pagando={pagando} />
             </Panel>
           </div>
+        </div>
+
+        <div className={styles.itemCartoes}>
+          <Panel
+            icone={CreditCard}
+            titulo="Cartões de Crédito"
+            subtitulo="faturas e limite"
+            acao={
+              <Link to="/faturas">
+                <Button tamanho="pequeno" variante="secundario">
+                  Ver faturas
+                </Button>
+              </Link>
+            }
+          >
+            <CreditCardsWidget resumos={resumoCartoes} />
+          </Panel>
         </div>
 
         <div className={styles.itemInsights}>

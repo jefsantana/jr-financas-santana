@@ -61,6 +61,55 @@ export function dataDaCobranca(mesAno, dia) {
 }
 
 /**
+ * Compras de cartão no formato de um Gasto (data = data da compra), pra
+ * entrarem nos gráficos de categoria, pessoa, orçamento e relatórios no mês
+ * em que foram FEITAS, e não só quando a fatura é paga.
+ */
+export function comprasCartaoComoGastos(comprasCartao) {
+  return comprasCartao.map((c) => ({
+    id: `compra-${c.id}`,
+    descricao: c.descricao,
+    valor: c.valor,
+    data: c.dataCompra,
+    categoria: c.categoria,
+    cartao: c.cartao,
+    pessoa: c.pessoa,
+    doCartao: true,
+  }));
+}
+
+/**
+ * Gastos por competência: os gastos "de caixa" (sem os que só quitam uma
+ * compra de cartão — já contada na data da compra) + as compras do cartão.
+ * NÃO usar nos totais de Saldo/Entradas/Gastos do mês, que seguem o caixa.
+ */
+export function gastosPorCompetencia(gastos, comprasCartao) {
+  return [...gastos.filter((g) => !g.compraCartaoId), ...comprasCartaoComoGastos(comprasCartao)];
+}
+
+/**
+ * Resumo por cartão pro Dashboard: fatura em aberto (compras ainda não
+ * pagas), próximo vencimento e uso do limite.
+ */
+export function resumirCartoes(cartoes, comprasCartao, parcelamentos) {
+  return cartoes.map((cartao) => {
+    const abertas = comprasCartao.filter((c) => c.cartao === cartao.nome && !c.paga);
+    const porFatura = {};
+    abertas.forEach((c) => {
+      porFatura[c.mesFatura] = (porFatura[c.mesFatura] || 0) + Number(c.valor);
+    });
+    const proximoMes = Object.keys(porFatura).sort()[0] || null;
+    const vencimento = proximoMes ? vencimentoDaFatura(proximoMes, cartao.diaVencimento) : null;
+    return {
+      cartao,
+      emAberto: abertas.reduce((soma, c) => soma + Number(c.valor), 0),
+      proximaFatura: proximoMes ? { mesFatura: proximoMes, valor: porFatura[proximoMes], vencimento } : null,
+      uso: calcularUsoDoLimite(cartao, comprasCartao, parcelamentos),
+    };
+  });
+}
+
+/**
  * Valor de uma parcela, em centavos exatos: as parcelas são iguais
  * (arredondadas) e a diferença de centavos fica na última, pra soma
  * das parcelas bater sempre com o valor total.
@@ -267,10 +316,19 @@ export function agruparComprasPorFatura(comprasCartao) {
   comprasCartao.forEach((c) => {
     const chave = c.mesFatura;
     if (!grupos[chave]) {
-      grupos[chave] = { mesFatura: c.mesFatura, valorTotal: 0, totalAVista: 0, totalParcelado: 0, paga: true, itens: [] };
+      grupos[chave] = {
+        mesFatura: c.mesFatura,
+        valorTotal: 0,
+        valorAberto: 0,
+        totalAVista: 0,
+        totalParcelado: 0,
+        paga: true,
+        itens: [],
+      };
     }
     const parcelado = /\(\d+\/\d+\)$/.test(c.descricao || '');
     grupos[chave].valorTotal += Number(c.valor);
+    if (!c.paga) grupos[chave].valorAberto += Number(c.valor);
     if (parcelado) grupos[chave].totalParcelado += Number(c.valor);
     else grupos[chave].totalAVista += Number(c.valor);
     if (!c.paga) grupos[chave].paga = false;

@@ -1,5 +1,6 @@
 import { Layers } from 'lucide-react';
 import CrudPage from '../_shared/CrudPage.jsx';
+import { AbasCartao } from '../../components/cartoes/AbasCartao.jsx';
 import { ProgressBar } from '../../components/ui/index.js';
 import { useCrudMock } from '../../hooks/useCrudMock.js';
 import { formatarMoeda } from '../../utils/formatadores.js';
@@ -95,5 +96,10 @@ export default function Parcelamentos() {
     ],
   };
 
-  return <CrudPage config={config} />;
+  return (
+    <>
+      <AbasCartao />
+      <CrudPage config={config} />
+    </>
+  );
 }

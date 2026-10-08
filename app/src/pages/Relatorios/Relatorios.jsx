@@ -15,6 +15,7 @@ import {
   calcularTendencia,
   calcularResumoMensal,
   mapearGastosAlimentacao,
+  gastosPorCompetencia,
 } from '../../utils/financeiro.js';
 import { formatarData, formatarMoeda, nomeMesAno } from '../../utils/formatadores.js';
 import { exportarExcel, exportarCsv, exportarPdf } from '../../utils/exportarRelatorio.js';
@@ -22,7 +23,9 @@ import styles from './Relatorios.module.css';
 
 export default function Relatorios() {
   const { registros: entradas, carregando: carregandoEntradas } = useCrudMock('Entradas');
-  const { registros: gastos, carregando: carregandoGastos } = useCrudMock('Gastos');
+  const { registros: gastosCaixa, carregando: carregandoGastosCaixa } = useCrudMock('Gastos');
+  const { registros: comprasCartao, carregando: carregandoCompras } = useCrudMock('ComprasCartao');
+  const carregandoGastos = carregandoGastosCaixa || carregandoCompras;
   const { registros: movimentosCartaoAlimentacao, carregando: carregandoMovAlimentacao } = useCrudMock(
     'MovimentosCartaoAlimentacao'
   );
@@ -36,6 +39,10 @@ export default function Relatorios() {
   if (carregandoEntradas || carregandoGastos || carregandoMovAlimentacao || carregandoCartoesAlimentacao) {
     return <Loading texto="Carregando relatórios..." />;
   }
+
+  // Relatórios contam as compras do cartão de crédito pela DATA DA COMPRA (o
+  // Gasto gerado ao pagar a fatura é ignorado pra não duplicar).
+  const gastos = gastosPorCompetencia(gastosCaixa, comprasCartao);
 
   // Gastos do cartão alimentação — só entram nos gráficos de categoria abaixo
   // (visão informativa "quanto foi gasto em quê"), nunca nos totais de

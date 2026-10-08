@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { PanelLeftClose, LogOut } from 'lucide-react';
 import { NAV_ITEMS } from '../../utils/constantes.js';
 import { ICONES_NAV } from '../../utils/icones.js';
@@ -8,14 +8,15 @@ import { nomeExibicao } from '../../utils/formatadores.js';
 import styles from './Sidebar.module.css';
 import logoJr from '../../assets/logo-jr.svg';
 
-const GRUPOS_NAV = [...new Set(NAV_ITEMS.map((item) => item.grupo))].map((grupo) => ({
+const GRUPOS_NAV = [...new Set(NAV_ITEMS.filter((item) => !item.oculto).map((item) => item.grupo))].map((grupo) => ({
   grupo,
-  itens: NAV_ITEMS.filter((item) => item.grupo === grupo),
+  itens: NAV_ITEMS.filter((item) => !item.oculto && item.grupo === grupo),
 }));
 
 export function Sidebar({ aberta, recolhida, aoFechar, aoAlternarRecolhida }) {
   const { perfil, usuario, familia, pessoas, sair } = useAuth();
   const nomeExibido = usuario ? nomeExibicao(perfil, usuario) : '';
+  const { pathname } = useLocation();
 
   return (
     <>
@@ -46,7 +47,9 @@ export function Sidebar({ aberta, recolhida, aoFechar, aoAlternarRecolhida }) {
                     <li key={item.path}>
                       <NavLink
                         to={item.path}
-                        className={({ isActive }) => `${styles.link} ${isActive ? styles.linkAtivo : ''}`}
+                        className={({ isActive }) =>
+                          `${styles.link} ${isActive || item.rotasExtras?.some((rota) => pathname.startsWith(rota)) ? styles.linkAtivo : ''}`
+                        }
                         onClick={aoFechar}
                       >
                         <Icone className={corIcone} />

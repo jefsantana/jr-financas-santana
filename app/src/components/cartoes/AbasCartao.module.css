@@ -1,0 +1,26 @@
+.abas {
+  display: flex;
+  gap: var(--espaco-xs);
+  margin-bottom: var(--espaco-md);
+  overflow-x: auto;
+}
+
+.aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--cor-texto-secundario);
+  text-decoration: none;
+  border: 1px solid var(--cor-borda, transparent);
+}
+
+.abaAtiva {
+  background: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: #fff;
+}

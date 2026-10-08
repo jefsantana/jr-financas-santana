@@ -4,14 +4,18 @@ import CrudPage from '../_shared/CrudPage.jsx';
 import { ProgressBar } from '../../components/ui/index.js';
 import { useCrudMock } from '../../hooks/useCrudMock.js';
 import { formatarMoeda } from '../../utils/formatadores.js';
-import { mesAnoDe, obterMesAno } from '../../utils/financeiro.js';
+import { mesAnoDe, obterMesAno, gastosPorCompetencia } from '../../utils/financeiro.js';
 import { CategoriaComIcone } from '../../components/lancamentos/CategoriaComIcone.jsx';
 import { useCategorias } from '../../contexts/CategoriasContext.jsx';
 
 export default function Orcamentos() {
-  const { registros: gastos } = useCrudMock('Gastos');
+  const { registros: gastosCaixa } = useCrudMock('Gastos');
+  const { registros: comprasCartao } = useCrudMock('ComprasCartao');
   const { categoriasGasto, iconesGasto } = useCategorias();
   const mesAtual = mesAnoDe(new Date());
+
+  // Compras no cartão contam no mês da compra (não só quando a fatura é paga).
+  const gastos = useMemo(() => gastosPorCompetencia(gastosCaixa, comprasCartao), [gastosCaixa, comprasCartao]);
 
   const gastoPorCategoria = useMemo(() => {
     const mapa = {};

@@ -1,0 +1,48 @@
+.total {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.total span {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--cor-texto-secundario);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.nome {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
+.info {
+  font-size: 0.8rem;
+  color: var(--cor-texto-secundario);
+  margin: 0;
+}

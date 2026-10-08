@@ -20,7 +20,7 @@ export function SummaryCards({ saldoAtual, tendenciaSaldo, entradasMes, saidasMe
       <StatCard
         icone={TrendingDown}
         corIcone="perigo"
-        rotulo="Gastos do mês"
+        rotulo="Gastos pagos no mês"
         valor={saidasMes}
         tendencia={calcularTendencia(saidasMes, saidasMesAnterior, true)}
       />
