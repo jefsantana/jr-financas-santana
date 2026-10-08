@@ -53,3 +53,18 @@
   color: var(--cor-primaria);
   font-weight: 600;
 }
+
+/* Largura total: resumo à esquerda, pago/a pagar à direita; empilha no celular */
+.corpo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-xl);
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .corpo {
+    grid-template-columns: 1fr;
+    gap: var(--espaco-md);
+  }
+}

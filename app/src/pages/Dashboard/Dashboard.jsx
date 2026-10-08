@@ -400,29 +400,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className={`${styles.grade} ${styles.grupo}`}>
-          <div className={styles.itemContasFixas}>
-            <Panel icone={FileText} titulo="Contas Fixas do Mês" subtitulo={nomeMesCapitalizado(mesContasFixas)}>
-              <FixedBillsWidget resumo={resumoContasFixas} />
-            </Panel>
-          </div>
+        <div className={styles.itemContasFixas}>
+          <Panel icone={FileText} titulo="Contas Fixas do Mês" subtitulo={nomeMesCapitalizado(mesContasFixas)}>
+            <FixedBillsWidget resumo={resumoContasFixas} />
+          </Panel>
+        </div>
 
-          <div className={styles.itemCartoes}>
-            <Panel
-              icone={CreditCard}
-              titulo="Cartões de Crédito"
-              subtitulo="faturas e limite"
-              acao={
-                <Link to="/faturas">
-                  <Button tamanho="pequeno" variante="secundario">
-                    Ver faturas
-                  </Button>
-                </Link>
-              }
-            >
-              <CreditCardsWidget resumos={resumoCartoes} />
-            </Panel>
-          </div>
+        <div className={styles.itemCartoes}>
+          <Panel
+            icone={CreditCard}
+            titulo="Cartões de Crédito"
+            subtitulo="faturas e limite"
+            acao={
+              <Link to="/faturas">
+                <Button tamanho="pequeno" variante="secundario">
+                  Ver faturas
+                </Button>
+              </Link>
+            }
+          >
+            <CreditCardsWidget resumos={resumoCartoes} />
+          </Panel>
         </div>
 
         <div className={styles.itemInsights}>
